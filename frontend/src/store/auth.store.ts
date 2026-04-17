@@ -1,6 +1,12 @@
 import { create } from 'zustand';
-import type { User } from '@sree/shared';
 import { supabase } from '../lib/supabase';
+
+export interface User {
+  id: string;
+  email: string;
+  plan_type?: 'free' | 'basic' | 'pro';
+  requests_remaining?: number;
+}
 
 interface AuthState {
   user: User | null;
@@ -23,17 +29,35 @@ export const useAuthStore = create<AuthState>((set) => ({
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session?.user) {
-        // Fetch additional user profile data from public.users
+        // Fetch additional user profile data from public.profiles
         const { data: profile } = await supabase
           .from('profiles')
-          .select('*')
+          .select('id, email, plan_type, requests_remaining')
           .eq('id', session.user.id)
           .single();
 
         if (profile) {
-          set({ user: profile as User, loading: false, initialized: true });
+          set({ 
+            user: {
+              id: session.user.id,
+              email: session.user.email || profile.email,
+              plan_type: profile.plan_type as 'free' | 'basic' | 'pro',
+              requests_remaining: profile.requests_remaining
+            }, 
+            loading: false, 
+            initialized: true 
+          });
         } else {
-           set({ user: null, loading: false, initialized: true });
+          // Fallback to base user data if profile isn't ready yet
+          set({ 
+            user: { 
+              id: session.user.id, 
+              email: session.user.email || '',
+              plan_type: 'free' as 'free'
+            }, 
+            loading: false, 
+            initialized: true 
+          });
         }
       } else {
         set({ user: null, loading: false, initialized: true });
@@ -41,17 +65,23 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       // Listen for auth changes
       supabase.auth.onAuthStateChange(async (event, session) => {
-        if (event === 'SIGNED_IN' && session?.user) {
+        if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
           const { data: profile } = await supabase
             .from('profiles')
-            .select('*')
+            .select('plan_type, requests_remaining')
             .eq('id', session.user.id)
             .single();
           
-          if (profile) {
-            set({ user: profile as User });
-          }
-        } else if (event === 'SIGNED_OUT') {
+          set({ 
+            user: {
+              id: session.user.id,
+              email: session.user.email || '',
+              plan_type: (profile?.plan_type as 'free' | 'basic' | 'pro') || 'free',
+              requests_remaining: profile?.requests_remaining
+            }
+          });
+        }
+ else if (event === 'SIGNED_OUT') {
           set({ user: null });
         }
       });

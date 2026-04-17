@@ -256,6 +256,38 @@
   box-shadow: 0 4px 12px var(--primary-glow);
 }
 
+.profileActions {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.signOutBtn {
+  padding: 8px;
+  background: rgba(239, 68, 68, 0.05);
+  border: 1px solid rgba(239, 68, 68, 0.1);
+  border-radius: 10px;
+  color: #EF4444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.signOutBtn:hover {
+  background: #EF4444;
+  color: white;
+  border-color: #EF4444;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.active {
+  background: var(--bg-surface-light) !important;
+  color: var(--text-primary) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
 /* Custom Scrollbar for Sidebar */
 .historySection::-webkit-scrollbar {
   width: 4px;

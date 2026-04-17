@@ -5,17 +5,23 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { DashboardLayout } from '../features/dashboard/DashboardLayout';
 import { supabase } from '../lib/supabase';
+import { useChatStore } from '../store/chat.store';
+import { useAuthStore } from '../store/auth.store';
 import styles from './ChatPage.module.css';
 
-interface Message {
-  role: 'user' | 'assistant';
-  content: string;
-}
-
 const ChatPage: React.FC = () => {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const { user } = useAuthStore();
+  const { 
+    activeConversation, 
+    messages, 
+    addMessage, 
+    loading: chatLoading,
+    createConversation 
+  } = useChatStore();
+  
   const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [streamingMessage, setStreamingMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -24,7 +30,7 @@ const ChatPage: React.FC = () => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, isGenerating, streamingMessage]);
 
   const suggestions = [
     { title: 'Write a technical blog', desc: 'About React 19 features' },
@@ -35,12 +41,22 @@ const ChatPage: React.FC = () => {
 
   const handleSend = async (text?: string) => {
     const messageContent = text || input;
-    if (!messageContent.trim() || isLoading) return;
+    if (!messageContent.trim() || isGenerating || !user?.id) return;
 
-    const userMessage: Message = { role: 'user', content: messageContent };
-    setMessages(prev => [...prev, userMessage]);
+    let currentConvId = activeConversation?.id;
+
+    // 1. Create conversation if none active
+    if (!currentConvId) {
+      const newConv = await createConversation(user.id, messageContent.slice(0, 40) + '...');
+      if (!newConv) return;
+      currentConvId = newConv.id;
+    }
+
+    // 2. Add user message locally and to DB
+    await addMessage(currentConvId, 'user', messageContent);
     setInput('');
-    setIsLoading(true);
+    setIsGenerating(true);
+    setStreamingMessage('');
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -52,7 +68,7 @@ const ChatPage: React.FC = () => {
           'Authorization': `Bearer ${session?.access_token}`,
         },
         body: JSON.stringify({
-          messages: [...messages, userMessage],
+          messages: [...messages.map(m => ({ role: m.role, content: m.content })), { role: 'user', content: messageContent }],
           model: 'meta/llama3-70b-instruct',
         }),
       });
@@ -65,8 +81,6 @@ const ChatPage: React.FC = () => {
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
       let assistantMessage = '';
-
-      setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
 
       while (true) {
         const { done, value } = await reader!.read();
@@ -85,11 +99,7 @@ const ChatPage: React.FC = () => {
               if (error) throw new Error(error);
               if (content) {
                 assistantMessage += content;
-                setMessages(prev => {
-                  const newMessages = [...prev];
-                  newMessages[newMessages.length - 1].content = assistantMessage;
-                  return newMessages;
-                });
+                setStreamingMessage(assistantMessage);
               }
             } catch (e) {
               console.error('Error parsing stream chunk:', e);
@@ -97,14 +107,16 @@ const ChatPage: React.FC = () => {
           }
         }
       }
+
+      // 3. Save assistant message to DB
+      await addMessage(currentConvId, 'assistant', assistantMessage);
+
     } catch (error: any) {
       console.error('Chat Error:', error);
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: `⚠️ Error: ${error.message}. Please check your NVIDIA API key in settings.` 
-      }]);
+      await addMessage(currentConvId, 'assistant', `⚠️ Error: ${error.message}. Please check your NVIDIA API key in settings.`);
     } finally {
-      setIsLoading(false);
+      setIsGenerating(false);
+      setStreamingMessage('');
     }
   };
 
@@ -112,7 +124,7 @@ const ChatPage: React.FC = () => {
     <DashboardLayout>
       <div className={styles.container}>
         <div className={styles.messagesList}>
-          {messages.length === 0 ? (
+          {messages.length === 0 && !chatLoading ? (
             <div className={styles.emptyState}>
               <motion.div 
                 initial={{ scale: 0.9, opacity: 0 }}
@@ -141,7 +153,7 @@ const ChatPage: React.FC = () => {
             <AnimatePresence initial={false}>
               {messages.map((m, i) => (
                 <motion.div
-                  key={i}
+                  key={m.id || i}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   className={`${styles.messageRow} ${m.role === 'user' ? styles.user : ''}`}
@@ -152,12 +164,30 @@ const ChatPage: React.FC = () => {
                   <div className={`${styles.bubble} ${m.role === 'assistant' ? styles.ai : styles.user}`}>
                     <div className={styles.markdown}>
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {m.content || (isLoading && i === messages.length - 1 ? 'Thinking...' : '')}
+                        {m.content}
                       </ReactMarkdown>
                     </div>
                   </div>
                 </motion.div>
               ))}
+              {isGenerating && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={styles.messageRow}
+                >
+                  <div className={`${styles.avatar} ${styles.ai}`}>
+                    <Bot size={20} />
+                  </div>
+                  <div className={`${styles.bubble} ${styles.ai}`}>
+                    <div className={styles.markdown}>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {streamingMessage || 'Thinking...'}
+                      </ReactMarkdown>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
             </AnimatePresence>
           )}
           <div ref={messagesEndRef} />
@@ -174,7 +204,7 @@ const ChatPage: React.FC = () => {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
               placeholder="Ask me anything..."
-              disabled={isLoading}
+              disabled={isGenerating}
             />
             <div className={styles.inputActions}>
               <button className={styles.iconBtn}>
@@ -186,9 +216,9 @@ const ChatPage: React.FC = () => {
               <button 
                 className={styles.sendBtn}
                 onClick={() => handleSend()}
-                disabled={isLoading || !input.trim()}
+                disabled={isGenerating || !input.trim()}
               >
-                {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                {isGenerating ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
               </button>
             </div>
           </div>
