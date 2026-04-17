@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authMiddleware } from '../middleware/auth';
 import { supabaseAdmin } from '../lib/supabase';
 import { aiService } from '../services/ai.service';
+import { decrypt } from '../utils/encryption';
 import multer from 'multer';
 import fs from 'fs';
 
@@ -14,19 +15,22 @@ router.post('/chat', authMiddleware, async (req: any, res) => {
     const { messages, model } = req.body;
     const userId = req.user.id;
 
-    // 1. Get encrypted API key from DB
-    const { data: user, error } = await supabaseAdmin
-      .from('users')
-      .select('nvidia_api_key')
-      .eq('id', userId)
+    // 1. Get encrypted API key from api_keys table
+    const { data: keyRecord, error } = await supabaseAdmin
+      .from('api_keys')
+      .select('encrypted_key')
+      .eq('user_id', userId)
+      .eq('provider', 'nvidia')
       .single();
-
-    if (error || !user?.nvidia_api_key) {
+    
+    if (error || !keyRecord?.encrypted_key) {
       return res.status(400).json({ 
         success: false, 
         message: 'NVIDIA API Key not found. Please add it in settings.' 
       });
     }
+
+    const nvidiaApiKey = decrypt(keyRecord.encrypted_key);
 
     // 2. Set headers for streaming
     res.setHeader('Content-Type', 'text/event-stream');
@@ -34,7 +38,7 @@ router.post('/chat', authMiddleware, async (req: any, res) => {
     res.setHeader('Connection', 'keep-alive');
 
     // 3. Initiate stream
-    const stream = await aiService.streamChat(user.nvidia_api_key, messages, model);
+    const stream = await aiService.streamChat(nvidiaApiKey, messages, model);
 
     for await (const chunk of stream) {
       const content = chunk.choices[0]?.delta?.content || '';
@@ -62,20 +66,22 @@ router.post('/image', authMiddleware, async (req: any, res) => {
     const { prompt, model } = req.body;
     const userId = req.user.id;
 
-    const { data: user, error } = await supabaseAdmin
-      .from('users')
-      .select('nvidia_api_key')
-      .eq('id', userId)
+    const { data: keyRecord, error } = await supabaseAdmin
+      .from('api_keys')
+      .select('encrypted_key')
+      .eq('user_id', userId)
+      .eq('provider', 'nvidia')
       .single();
 
-    if (error || !user?.nvidia_api_key) {
+    if (error || !keyRecord?.encrypted_key) {
       return res.status(400).json({ 
         success: false, 
         message: 'NVIDIA API Key not found. Please add it in settings.' 
       });
     }
 
-    const result = await aiService.generateImage(user.nvidia_api_key, prompt, model);
+    const nvidiaApiKey = decrypt(keyRecord.encrypted_key);
+    const result = await aiService.generateImage(nvidiaApiKey, prompt, model);
     res.json({ success: true, data: result });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
@@ -92,22 +98,25 @@ router.post('/voice', authMiddleware, upload.single('file'), async (req: any, re
       return res.status(400).json({ success: false, message: 'Audio file is required' });
     }
 
-    const { data: user, error } = await supabaseAdmin
-      .from('users')
-      .select('nvidia_api_key')
-      .eq('id', userId)
+    const { data: keyRecord, error } = await supabaseAdmin
+      .from('api_keys')
+      .select('encrypted_key')
+      .eq('user_id', userId)
+      .eq('provider', 'nvidia')
       .single();
 
-    if (error || !user?.nvidia_api_key) {
+    if (error || !keyRecord?.encrypted_key) {
       return res.status(400).json({ 
         success: false, 
         message: 'NVIDIA API Key not found. Please add it in settings.' 
       });
     }
 
+    const nvidiaApiKey = decrypt(keyRecord.encrypted_key);
+
     // Convert file to stream/buffer as expected by OpenAI SDK
     const fileStream = fs.createReadStream(file.path);
-    const result = await aiService.transcribeAudio(user.nvidia_api_key, fileStream);
+    const result = await aiService.transcribeAudio(nvidiaApiKey, fileStream);
 
     // Clean up uploaded file
     fs.unlinkSync(file.path);

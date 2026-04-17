@@ -5,7 +5,6 @@ import {
   MessageSquare,
   History,
   HelpCircle,
-  Lock,
   ChevronRight,
   Zap,
   Star

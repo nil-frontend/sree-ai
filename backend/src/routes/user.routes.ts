@@ -9,7 +9,7 @@ const router = Router();
 router.get('/profile', authMiddleware, async (req: any, res) => {
   try {
     const { data: profile, error } = await supabaseAdmin
-      .from('profiles')
+      .from('users')
       .select('*')
       .eq('id', req.user.id)
       .single();
@@ -33,11 +33,16 @@ router.post('/settings/keys', authMiddleware, async (req: any, res) => {
     }
 
     const encryptedKey = encrypt(nvidia_api_key);
-
+    
+    // Upsert key in api_keys table
     const { error } = await supabaseAdmin
-      .from('profiles')
-      .update({ nvidia_api_key: encryptedKey })
-      .eq('id', userId);
+      .from('api_keys')
+      .upsert({ 
+        user_id: userId, 
+        provider: 'nvidia', 
+        encrypted_key: encryptedKey,
+        last_used_at: new Date().toISOString()
+      }, { onConflict: 'user_id,provider' });
 
     if (error) throw error;
 

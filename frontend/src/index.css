@@ -163,6 +163,7 @@ body {
 .text-gradient {
   background: linear-gradient(to right, var(--primary), var(--accent));
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -263,7 +264,7 @@ body {
   border-radius: 12px;
   display: flex;
   align-items: center;
-  justifyContent: center;
+  justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
 }

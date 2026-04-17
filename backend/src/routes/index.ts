@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import healthRoutes from './health';
-import userRoutes from './user';
-import aiRoutes from './ai';
+import healthRoutes from './health.routes';
+import userRoutes from './user.routes';
+import aiRoutes from './ai.routes';
 
 const router = Router();
 
