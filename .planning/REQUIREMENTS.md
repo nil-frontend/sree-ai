@@ -1,66 +1,42 @@
-# Requirements: Modern Premium AI SaaS Redesign
+# Requirements: Milestone 4 — Dynamic Integration & Supabase Sync
 
-## 1. Aesthetic Context
-- **Theme:** Dark Mode First.
-- **Background Color:** `#0F0F0F` (Dark Obsidian).
-- **Surface Color:** `#1A1A1A` (Ebonite).
-- **Accent:** Blue-to-Purple Gradient.
-- **Geometry:** Rounded corners (12-16px).
-- **Interactions:** Smooth transitions (200-300ms), minimalist microinteractions.
-- **Typography:** Modern sans-serif (Inter preferred).
+## 1. Data Sync Requirements
 
-## 2. Global Layout
-- **Top Navigation:**
-  - Sticky at top.
-  - Left: App Logo (Link to Home).
-  - Center: Nav Links (Chat, Voice, Image, Video) + Tools Dropdown.
-  - Right: User Profile with Avatar (Plan, Settings, Logout).
-- **Left Sidebar:**
-  - Fixed position.
-  - Top: "+ New Chat" CTA + Search Chat input.
-  - Middle: Scrollable Chat History (Today, Yesterday, Older).
-  - Bottom: Feature Request + User Profile Card (Name, Plan Badge, Upgrade Button).
-- **Main Area:**
-  - Scrollable content area.
+### Sidebar Sync
+- **SYNC-01**: Components must fetch active user conversations from the Supabase `conversations` table.
+- **SYNC-02**: History list must group items by relative time (Today, Yesterday, Older).
+- **SYNC-03**: Clicking a history item must navigate to the specific chat session.
 
-## 3. Page Specifications
+### User Profile Sync
+- **SYNC-04**: Fetch user display name, avatar, and plan status (Free/Pro) from the `users` table.
+- **SYNC-05**: Profile card in sidebar must reflect real-time subscription status.
 
-### Chat Page
-- **Empty State:** Centered "Ask anything..." input box.
-- **Active State:** Scrollable message list (User vs AI bubbles).
-- **Input:** Sticky bottom input bar.
-- **Features:** Message copying, regeneration, streaming text animation.
+## 2. Interactive Features
 
-### Voice Page
-- **Visuals:** Animated AI assistant orb/waveform in center.
-- **Interaction:** Listening indicator, automatic start.
-- **Output:** Post-conversation transcript in chat format (italicized).
+### Session Management
+- **SESS-01**: "+ New Chat" button must trigger a route/helper to create a new record in the `conversations` table.
+- **SESS-02**: Handle empty states when a user has no previous history.
 
-### Image Page
-- **Inputs:** Prompt field, Style dropdown, Aspect Ratio selector.
-- **Gallery:** Responsive grid of generated image cards.
-- **Actions:** Download, Delete, Copy Prompt (on hover).
+### User Actions
+- **ACT-01**: Implement "Logout" functionality using Supabase Auth.
+- **ACT-02**: Link "Settings" to the profile management page.
+- **ACT-03**: Upgrade button must link to a simulated/actual payment gateway or plan selection.
 
-### Video Page Content
-- **State:** "Coming Soon" placeholder.
-- **Input:** Email field for notifications.
+## 3. Technical Constraints
+- Use React hooks (useState/useEffect) or a state manager (Zustand) for global user state.
+- Handle loading states with skeleton screens or spinners during data fetching.
+- Implement error boundaries for failed DB requests.
 
-### Tools Page
-- **Layout:** Grid of tool cards.
-- **Tool List:**
-  - AI Writing Humanizer
-  - Prompt Enhancer
-  - Document Analyzer
-  - Image to PDF Maker
-  - Background Remover
-
-### Settings Page
-- **User Info:** Avatar, Name, Email, Password reset, Account deletion.
-- **Plan & Billing:** View current plan, billing history.
-- **API Keys:** Key management.
-- **Preferences:** Light/Dark toggle.
-
-## 4. Technical Constraints
-- No hard dependencies on external UI libraries unless specified (Lucide/Framer Motion already in use).
-- Desktop-first responsive design.
-- SEO best practices (Semantic HTML, Title/Meta tags).
+## 4. Traceability
+| REQ-ID | Phase | Status |
+|--------|-------|--------|
+| SYNC-01| TBD   | Pending|
+| SYNC-02| TBD   | Pending|
+| SYNC-03| TBD   | Pending|
+| SYNC-04| TBD   | Pending|
+| SYNC-05| TBD   | Pending|
+| SESS-01| TBD   | Pending|
+| SESS-02| TBD   | Pending|
+| ACT-01 | TBD   | Pending|
+| ACT-02 | TBD   | Pending|
+| ACT-03 | TBD   | Pending|
