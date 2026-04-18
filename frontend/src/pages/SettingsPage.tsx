@@ -1,13 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Key, Save, CheckCircle2, AlertCircle, ShieldCheck } from 'lucide-react';
+import { Key, Save, CheckCircle2, AlertCircle, ShieldCheck, Trash2, RefreshCcw } from 'lucide-react';
 import { DashboardLayout } from '../features/dashboard/DashboardLayout';
 import api from '../lib/api';
 
+interface ApiKeyInfo {
+  provider: string;
+  updated_at: string;
+  last_used_at: string;
+}
+
 const SettingsPage: React.FC = () => {
   const [apiKey, setApiKey] = useState('');
-  const [status, setStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
+  const [savedKeys, setSavedKeys] = useState<ApiKeyInfo[]>([]);
+  const [status, setStatus] = useState<'idle' | 'saving' | 'success' | 'error' | 'loading'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+
+  const fetchKeys = async () => {
+    try {
+      const response = await api.get('/user/settings/keys');
+      setSavedKeys(response.data.data || []);
+    } catch (error) {
+      console.error('Failed to fetch keys:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchKeys();
+  }, []);
 
   const handleSave = async () => {
     if (!apiKey.trim()) return;
@@ -17,10 +37,22 @@ const SettingsPage: React.FC = () => {
       await api.post('/user/settings/keys', { nvidia_api_key: apiKey });
       setStatus('success');
       setApiKey(''); // Clear for security after save
+      await fetchKeys();
       setTimeout(() => setStatus('idle'), 3000);
     } catch (error: any) {
       setStatus('error');
       setErrorMessage(error.response?.data?.message || 'Failed to save API key');
+    }
+  };
+
+  const handleDelete = async (provider: string) => {
+    if (!confirm(`Are you sure you want to delete your ${provider} API key? This will stop AI features from working for you.`)) return;
+    
+    try {
+      await api.delete(`/user/settings/keys/${provider}`);
+      await fetchKeys();
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Failed to delete key');
     }
   };
 
@@ -32,7 +64,7 @@ const SettingsPage: React.FC = () => {
           <p style={{ color: 'var(--text-secondary)' }}>Manage your AI configurations and security preferences.</p>
         </div>
 
-        <div className="glass" style={{ padding: '32px', borderRadius: '24px' }}>
+        <div className="glass" style={{ padding: '32px', borderRadius: '24px', marginBottom: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
             <Key className="text-gradient" size={24} />
             <h3 style={{ fontSize: '1.25rem' }}>NVIDIA NIM (Bring Your Own Key)</h3>
@@ -131,6 +163,58 @@ const SettingsPage: React.FC = () => {
               <AlertCircle size={18} />
               {errorMessage}
             </motion.div>
+          )}
+        </div>
+
+        {/* Saved Keys Section */}
+        <div className="glass" style={{ padding: '32px', borderRadius: '24px' }}>
+          <h3 style={{ fontSize: '1.25rem', marginBottom: '24px' }}>Active API Configuration</h3>
+          
+          {savedKeys.length === 0 ? (
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', textAlign: 'center', padding: '20px' }}>
+              No custom API keys configured yet. The workspace will use system defaults if available.
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {savedKeys.map((key) => (
+                <div key={key.provider} style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  padding: '16px',
+                  borderRadius: '16px',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)'
+                }}>
+                  <div>
+                    <div style={{ fontWeight: '600', textTransform: 'uppercase', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{key.provider}</div>
+                    <div style={{ fontSize: '0.85rem', marginTop: '4px' }}>
+                      Status: <span style={{ color: '#10B981' }}>Active</span>
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                      Last updated: {new Date(key.updated_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                  
+                  <button 
+                    onClick={() => handleDelete(key.provider)}
+                    style={{ 
+                      background: 'none', 
+                      border: 'none', 
+                      color: 'rgba(239, 68, 68, 0.5)', 
+                      cursor: 'pointer',
+                      padding: '8px',
+                      borderRadius: '8px',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = '#EF4444')}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(239, 68, 68, 0.5)')}
+                  >
+                    <Trash2 size={20} />
+                  </button>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       </div>

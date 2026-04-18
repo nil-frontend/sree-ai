@@ -12,7 +12,12 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
     const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
 
     if (error || !user) {
-      return res.status(401).json({ success: false, message: 'Unauthorized: Invalid token' });
+      console.error('Auth Middleware - Error verifying token:', error?.message || 'No user found');
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Unauthorized: Invalid token',
+        debug: process.env.NODE_ENV === 'development' ? error?.message : undefined 
+      });
     }
 
     // Attach user to request

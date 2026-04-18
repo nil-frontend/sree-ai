@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authMiddleware } from '../middleware/auth';
 import { supabaseAdmin } from '../lib/supabase';
-import { encrypt } from '../utils/encryption';
+import { ApiKeyService } from '../services/apiKey.service';
 
 const router = Router();
 
@@ -32,21 +32,39 @@ router.post('/settings/keys', authMiddleware, async (req: any, res) => {
       return res.status(400).json({ success: false, message: 'API key is required' });
     }
 
-    const encryptedKey = encrypt(nvidia_api_key);
+    const success = await ApiKeyService.saveUserApiKey(userId, 'nvidia', nvidia_api_key);
     
-    // Upsert key in api_keys table
-    const { error } = await supabaseAdmin
-      .from('api_keys')
-      .upsert({ 
-        user_id: userId, 
-        provider: 'nvidia', 
-        encrypted_key: encryptedKey,
-        last_used_at: new Date().toISOString()
-      }, { onConflict: 'user_id,provider' });
-
-    if (error) throw error;
+    if (!success) {
+      throw new Error('Failed to encrypt or save API key');
+    }
 
     res.json({ success: true, message: 'API key updated successfully' });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// List API Keys
+router.get('/settings/keys', authMiddleware, async (req: any, res) => {
+  try {
+    const keys = await ApiKeyService.listUserApiKeys(req.user.id);
+    res.json({ success: true, data: keys });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Delete API Key
+router.delete('/settings/keys/:provider', authMiddleware, async (req: any, res) => {
+  try {
+    const { provider } = req.params;
+    const success = await ApiKeyService.deleteUserApiKey(req.user.id, provider);
+    
+    if (success) {
+      res.json({ success: true, message: `${provider} key deleted successfully` });
+    } else {
+      res.status(500).json({ success: false, message: `Failed to delete ${provider} key` });
+    }
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }

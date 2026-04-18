@@ -1,8 +1,15 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, User, Zap, Shield, Key } from 'lucide-react';
+import { X, User, Zap, Shield, Key, RefreshCw, CheckCircle2, AlertCircle, Trash2 } from 'lucide-react';
 import { useAuthStore } from '../../store/auth.store';
+import api from '../../lib/api';
 import styles from './SettingsModal.module.css';
+
+interface ApiKeyInfo {
+  provider: string;
+  updated_at: string;
+  last_used_at: string;
+}
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -11,15 +18,69 @@ interface SettingsModalProps {
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const { user, updateProfile } = useAuthStore();
+  const [apiKey, setApiKey] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [healthStatus, setHealthStatus] = useState<'idle' | 'checking' | 'ok' | 'error'>('idle');
+  const [savedKeys, setSavedKeys] = useState<ApiKeyInfo[]>([]);
+
+  const fetchKeys = async () => {
+    try {
+      const response = await api.get('/user/settings/keys');
+      setSavedKeys(response.data.data || []);
+    } catch (error) {
+      console.error('Failed to fetch keys:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchKeys();
+    }
+  }, [isOpen]);
 
   const handleUpgrade = async () => {
     if (!user) return;
     try {
-      // Simulate upgrade
       await updateProfile({ plan_type: 'pro' });
       alert('Successfully upgraded to Pro! You now have unlimited neural processing.');
     } catch (error) {
       alert('Failed to upgrade. Please check your connection.');
+    }
+  };
+
+  const handleSaveKey = async () => {
+    if (!apiKey.trim()) return;
+    setIsSaving(true);
+    try {
+      await api.post('/user/settings/keys', { nvidia_api_key: apiKey });
+      alert('API Key saved successfully and encrypted.');
+      setApiKey('');
+      fetchKeys();
+    } catch (error) {
+      alert('Error saving API key. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteKey = async (provider: string) => {
+    if (!confirm(`Are you sure you want to delete your ${provider} API key?`)) return;
+    try {
+      await api.delete(`/user/settings/keys/${provider}`);
+      fetchKeys();
+    } catch (error) {
+      alert('Failed to delete key.');
+    }
+  };
+
+  const checkHealth = async () => {
+    setHealthStatus('checking');
+    try {
+      const res = await api.get('/health');
+      if (res.data.success) setHealthStatus('ok');
+      else setHealthStatus('error');
+    } catch {
+      setHealthStatus('error');
     }
   };
 
@@ -74,13 +135,58 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
               </div>
 
               <div className={styles.section}>
-                <div className={styles.sectionTitle}>Connectivity</div>
-                <div className={styles.row}>
-                  <div className={styles.info}>
-                    <span className={styles.label}>NVIDIA API Keys</span>
-                    <span className={styles.value}>Managed by CORE Infrastructure</span>
+                <div className={styles.sectionTitle}>Cognitive Connectivity</div>
+                <div className={styles.row} style={{ flexDirection: 'column', alignItems: 'stretch', gap: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div className={styles.info}>
+                      <span className={styles.label}>NVIDIA API Key</span>
+                      <span className={styles.value}>Override system defaults with your personal key</span>
+                    </div>
+                    <Key size={20} className="text-muted" />
                   </div>
-                  <Key size={20} className="text-muted" />
+                  
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <input 
+                      type="password" 
+                      placeholder="nvapi-..." 
+                      className={styles.apiKeyInput}
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                    />
+                    <button 
+                      className={`${styles.btn} ${styles.btnPrimary}`} 
+                      onClick={handleSaveKey}
+                      disabled={isSaving}
+                    >
+                      {isSaving ? 'Saving...' : 'Save'}
+                    </button>
+                  </div>
+
+                  {savedKeys.length > 0 && (
+                    <div style={{ 
+                      marginTop: '8px', 
+                      padding: '12px', 
+                      borderRadius: '12px', 
+                      background: 'rgba(255,255,255,0.05)',
+                      border: '1px solid rgba(255,255,255,0.1)'
+                    }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase' }}>Active Keys</div>
+                      {savedKeys.map(key => (
+                        <div key={key.provider} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <CheckCircle2 size={14} style={{ color: 'var(--success)' }} />
+                            <span style={{ fontSize: '0.85rem' }}>{key.provider.toUpperCase()} Key Active</span>
+                          </div>
+                          <button 
+                            onClick={() => handleDeleteKey(key.provider)}
+                            style={{ background: 'none', border: 'none', color: 'rgba(239, 68, 68, 0.6)', cursor: 'pointer', padding: '4px' }}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -89,9 +195,31 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                 <div className={styles.row}>
                   <div className={styles.info}>
                     <span className={styles.label}>Neural Encryption</span>
-                    <span className={styles.value}>Active and Verified</span>
+                    <span className={styles.value}>AES-256 Verified</span>
                   </div>
                   <Shield size={20} style={{ color: 'var(--success)' }} />
+                </div>
+              </div>
+
+              <div className={styles.section}>
+                <div className={styles.sectionTitle}>Infrastructure Health</div>
+                <div className={styles.row}>
+                  <div className={styles.info}>
+                    <span className={styles.label}>Backend Core</span>
+                    <span className={styles.value}>
+                      {healthStatus === 'ok' ? 'System Optimized' : healthStatus === 'error' ? 'Connection Critical' : 'Verify neural link'}
+                    </span>
+                  </div>
+                  <button 
+                    className={styles.healthBtn} 
+                    onClick={checkHealth}
+                    disabled={healthStatus === 'checking'}
+                  >
+                    {healthStatus === 'checking' ? <RefreshCw size={18} className="animate-spin" /> : 
+                     healthStatus === 'ok' ? <CheckCircle2 size={18} color="var(--success)" /> : 
+                     healthStatus === 'error' ? <AlertCircle size={18} color="var(--error)" /> : 
+                     <RefreshCw size={18} />}
+                  </button>
                 </div>
               </div>
             </div>

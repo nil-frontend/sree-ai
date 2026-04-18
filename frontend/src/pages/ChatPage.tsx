@@ -69,7 +69,7 @@ const ChatPage: React.FC = () => {
         },
         body: JSON.stringify({
           messages: [...messages.map(m => ({ role: m.role, content: m.content })), { role: 'user', content: messageContent }],
-          model: 'meta/llama3-70b-instruct',
+          model: 'meta/llama-3.1-70b-instruct',
         }),
       });
 

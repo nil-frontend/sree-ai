@@ -8,7 +8,7 @@ class AiService {
     });
   }
 
-  async streamChat(apiKey: string, messages: any[], model: string = 'meta/llama3-70b-instruct') {
+  async streamChat(apiKey: string, messages: any[], model: string = 'meta/llama-3.1-70b-instruct') {
     const openai = this.getNvidiaClient(apiKey);
 
     return openai.chat.completions.create({
@@ -35,7 +35,7 @@ class AiService {
     });
   }
 
-  async transcribeAudio(apiKey: string, file: any, model: string = 'openai/whisper-large-v3') {
+  async transcribeAudio(apiKey: string, file: any, model: string = 'nvidia/whisper-large-v3') {
     const openai = this.getNvidiaClient(apiKey);
     
     return openai.audio.transcriptions.create({

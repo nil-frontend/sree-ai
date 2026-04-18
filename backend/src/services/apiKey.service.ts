@@ -51,13 +51,49 @@ export class ApiKeyService {
         provider,
         encrypted_key: encryptedData,
         iv: iv,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        last_used_at: new Date().toISOString()
       }, {
         onConflict: 'user_id,provider'
       });
 
     if (error) {
       console.error('Error saving API key:', error);
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Lists all API key providers for a user (without decrypted keys)
+   */
+  static async listUserApiKeys(userId: string) {
+    const { data, error } = await supabaseAdmin
+      .from('api_keys')
+      .select('provider, updated_at, last_used_at')
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('Error listing API keys:', error);
+      return [];
+    }
+
+    return data;
+  }
+
+  /**
+   * Deletes an API key for a user and provider
+   */
+  static async deleteUserApiKey(userId: string, provider: string): Promise<boolean> {
+    const { error } = await supabaseAdmin
+      .from('api_keys')
+      .delete()
+      .eq('user_id', userId)
+      .eq('provider', provider);
+
+    if (error) {
+      console.error('Error deleting API key:', error);
       return false;
     }
 

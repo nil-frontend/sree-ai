@@ -103,4 +103,26 @@ router.post('/voice', authMiddleware, upload.single('file'), async (req: any, re
   }
 });
 
+// Save API Key
+router.post('/save-api-key', authMiddleware, async (req: any, res) => {
+  try {
+    const { provider, key } = req.body;
+    const userId = req.user.id;
+
+    if (!provider || !key) {
+      return res.status(400).json({ success: false, message: 'Provider and key are required' });
+    }
+
+    const success = await ApiKeyService.saveUserApiKey(userId, provider, key);
+    
+    if (success) {
+      res.json({ success: true, message: 'API Key saved successfully' });
+    } else {
+      res.status(500).json({ success: false, message: 'Failed to save API key' });
+    }
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 export default router;
