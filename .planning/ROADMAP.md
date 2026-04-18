@@ -1,32 +1,70 @@
-# Roadmap: Milestone 4 — Dynamic Integration & Supabase Sync
+# Roadmap: Milestone 5 — Advanced Voice AI & Unified Intelligence Navigation
 
-## Milestone 4: Integration
-| Phase | Title | Status | Description | Requirements |
-|---|---|---|---|---|
-| 4.1 | DB Hooks & API Key Logic | ✅ COMPLETED | Create Supabase hooks for user and key management. | SYNC-04 |
-| 4.2 | Dynamic Sidebar History | ✅ COMPLETED | Fetch and group conversations by date in the sidebar. | SYNC-01, SYNC-02, SYNC-03 |
-| 4.3 | Session Management | ✅ COMPLETED | Implement "+ New Chat" and session switching. | SESS-01, SESS-02, SYNC-05 |
-| 4.4 | Profile & Auth Actions | ✅ COMPLETED | Hook up Logout, Settings, and Upgrade flows. | ACT-01, ACT-02, ACT-03 |
+## Milestone v1.1 Goals
+Enhance the Voice AI experience with real-time functionality and implement persistent, ID-based routing for all conversations.
 
-## Success Criteria per Phase
+---
 
-### Phase 4.1: DB Hooks
-1. User can see their real email in the sidebar.
-2. Premium status is pulled from the DB.
-3. Backend successfully decrypts Keys for AI calls.
+## Phase 5.1: Routing & ID-based State Implementation
+**Goal:** Enable unique session tracking via URLs for all intelligence sessions.
 
-### Phase 4.2: Dynamic Sidebar
-1. Sidebar shows "Today", "Yesterday", and "Older" categories.
-2. Voice AI and Text chats are separated visually.
-3. Three-dot menu appears on hover for each chat item.
-4. Clicking "Delete" in the menu removes the conversation from DB and UI.
+### Requirements
+- **ROUT-01**: Implement URL-based session tracking for standard chats: `/dashboard/chat/:id`.
+- **ROUT-02**: Implement URL-based session tracking for voice handoffs: `/dashboard/voice/chat/:id`.
 
-### Phase 4.3: Session Management
-1. Clicking "+ New Chat" resets the input but DOES NOT create a DB entry yet.
-2. DB entry is created only when the first AI request is sent.
-3. Sidebar history refreshes immediately after the first message.
+### Success Criteria
+1. Navigating to `/dashboard/chat` with an ID loads the specific conversation from Supabase.
+2. The "New Chat" workflow correctly generates a UUID and updates the URL.
+3. Page refreshes preserve the active conversation context.
 
-### Phase 4.4: Profile & Auth
-1. Logout button terminates the session and redirects to sign-in.
-2. Settings button opens the settings modal/page.
-3. Upgrade status is reflected if changed in the DB.
+---
+
+## Phase 5.2: SideBar Context & Data Segregation
+**Goal:** Filter conversation history based on the active domain context.
+
+### Requirements
+- **NAV-01**: Dynamic Sidebar Filtering (Filter by `type` in history).
+- **DATA-01**: Strict data segregation between `chat` and `voice` types.
+- **DATA-02**: Correct initialization of conversation types in store actions.
+
+### Success Criteria
+1. On the Voice page, the sidebar history only shows past voice sessions.
+2. Conversation type ('chat' or 'voice') is correctly persisted upon creation.
+3. Sidebar navigation items correctly distinguish between intelligence modes.
+
+---
+
+## Phase 5.3: Voice AI Interaction & Visualizer
+**Goal:** Implement real-time voice processing and reactive UI elements.
+
+### Requirements
+- **VOICE-01**: Functional Voice AI integration (Streaming transcribe + talk).
+- **VOICE-02**: Real-time voice activity visualization (Perplexity-style pulsing elements).
+
+### Success Criteria
+1. Web Speech API or NVIDIA NIM integration successfully captures and transcribes audio.
+2. Animated elements react dynamically to the microphone's input volume (decibel-based scaling).
+3. "Thinking" state maintains visual feedback during neural processing.
+
+---
+
+## Phase 5.4: Session Handoff & UI Polish
+**Goal:** Seamless transition from voice interaction to text-based review.
+
+### Requirements
+- **ROUT-03**: Post-Voice Transcript View (Automatic handoff).
+- **ROUT-04**: Transcript Aesthetics (Italicized text styling).
+- **NAV-02**: Session Persistence (Loading voice history sessions from sidebar).
+
+### Success Criteria
+1. Voice session termination triggers a redirect to the transcript chat view.
+2. All messages in the voice-to-chat handoff view are rendered in **Italic**.
+3. Users can revisit voice transcripts from the sidebar history smoothly.
+
+---
+
+## Traceability Summary
+- **VOICE**: 5.3
+- **NAV**: 5.2, 5.4
+- **ROUT**: 5.1, 5.4
+- **DATA**: 5.2

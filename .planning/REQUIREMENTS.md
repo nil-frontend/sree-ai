@@ -1,45 +1,43 @@
-# Requirements: Milestone 4 — Dynamic Integration & Supabase Sync
+# Requirements: Milestone 5 — Advanced Voice AI & Unified Intelligence Navigation
 
-## 1. Data Sync Requirements
+## 1. 🎙️ AI Voice Processing
 
-### Sidebar Sync
-- **SYNC-01**: Components must fetch active user conversations from the Supabase `conversations` table.
-- **SYNC-02**: History list must group items by relative time (Today, Yesterday, Older).
-- **SYNC-03**: Clicking a history item must navigate to the specific chat session.
+### Voice Engine
+- **VOICE-01**: Functional Voice AI integration. Must handle microphone input, real-time transcription (stt), and AI response streaming.
+- **VOICE-02**: Real-time voice activity visualization. Implement small, animated UI elements that react dynamically to audio input (Perplexity-style "breathing" or "pulsing" dots).
 
-### User Profile Sync
-- **SYNC-04**: Fetch user display name, avatar, and plan status (Free/Pro) from the `users` table.
-- **SYNC-05**: Profile card in sidebar must reflect real-time subscription status.
-- **SYNC-06**: Three-dot menu on hover for chat listings with delete action.
-- **SYNC-07**: Categorize and separate Voice AI chats from normal chats in the sidebar.
+## 2. 🧭 Sidebar & Navigation Intelligence
 
-## 2. Interactive Features
+### Contextual Filtering
+- **NAV-01**: Dynamic Sidebar Filtering. When on the Voice page, the history sidebar must ONLY show conversations where `type === 'voice'`. When on Chat, show `type === 'chat'`.
+- **NAV-02**: Session Persistence. Clicking a history item must load the specific session ID and restore the conversation state.
 
-### Session Management
-- **SESS-01**: "+ New Chat" button must trigger a route/helper to create a new record in the `conversations` table.
-- **SESS-02**: Handle empty states when a user has no previous history.
-- **SESS-03**: Conversations must only be persisted in the database after the first message is sent.
+## 3. 🛣️ Advanced Routing & Session Handoff
 
-### User Actions
-- **ACT-01**: Implement "Logout" functionality using Supabase Auth.
-- **ACT-02**: Link "Settings" to the profile management page.
-- **ACT-03**: Upgrade button must link to a simulated/actual payment gateway or plan selection.
+### URL Identifiers
+- **ROUT-01**: Implement URL-based session tracking for standard chats: `/dashboard/chat/:id`.
+- **ROUT-02**: Implement URL-based session tracking for voice handoffs: `/dashboard/voice/chat/:id`.
 
-## 3. Technical Constraints
-- Use React hooks (useState/useEffect) or a state manager (Zustand) for global user state.
-- Handle loading states with skeleton screens or spinners during data fetching.
-- Implement error boundaries for failed DB requests.
+### User Experience Handoff
+- **ROUT-03**: Post-Voice Transcript View. After a voice conversation ends, automatically navigate to `/dashboard/voice/chat/:id`.
+- **ROUT-04**: Transcript Aesthetics. On the voice chat handoff page, the transcript text must be styled in **Italic** to distinguish it from manual chat text.
 
-## 4. Traceability
+## 4. 📊 Data Architecture
+
+### Logical Segregation
+- **DATA-01**: Strict data segregation between `chat` and `voice` types in the `conversations` table.
+- **DATA-02**: Ensure the sidebar "New Chat" vs "New Voice Session" correctly initializes the `type` column.
+
+## 5. Traceability Matrix
+
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| SYNC-01| TBD   | Pending|
-| SYNC-02| TBD   | Pending|
-| SYNC-03| TBD   | Pending|
-| SYNC-04| TBD   | Pending|
-| SYNC-05| TBD   | Pending|
-| SESS-01| TBD   | Pending|
-| SESS-02| TBD   | Pending|
-| ACT-01 | TBD   | Pending|
-| ACT-02 | TBD   | Pending|
-| ACT-03 | TBD   | Pending|
+| VOICE-01| 5.3   | Pending|
+| VOICE-02| 5.3   | Pending|
+| NAV-01 | 5.2   | Pending|
+| NAV-02 | 5.4   | Pending|
+| ROUT-01| 5.1   | Pending|
+| ROUT-02| 5.1   | Pending|
+| ROUT-03| 5.4   | Pending|
+| ROUT-04| 5.4   | Pending|
+| DATA-01| 5.2   | Pending|
