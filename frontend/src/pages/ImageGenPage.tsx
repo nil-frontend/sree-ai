@@ -1,22 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Image as ImageIcon, Wand2, Download, Trash2, Loader2, Sparkles } from 'lucide-react';
+import { Image as ImageIcon, Wand2, Trash2, Loader2, Sparkles, Clock } from 'lucide-react';
 import { DashboardLayout } from '../features/dashboard/DashboardLayout';
+import { useChatStore } from '../store/chat.store';
+import { useAuthStore } from '../store/auth.store';
 import api from '../lib/api';
 
-interface GeneratedImage {
-  id: string;
-  url: string;
-  prompt: string;
-}
-
 const ImageGenPage: React.FC = () => {
+  const { user } = useAuthStore();
+  const { conversations, fetchConversations, createConversation, addMessage, deleteConversation, loading } = useChatStore();
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [images, setImages] = useState<GeneratedImage[]>([]);
+
+  useEffect(() => {
+    if (user?.id) {
+      fetchConversations(user.id);
+    }
+  }, [user?.id, fetchConversations]);
+
+  const imageHistory = conversations
+    .filter(c => c.type === 'image')
+    .map(c => ({
+      id: c.id,
+      title: c.title,
+      // We'll store the URL in the first assistant message for this conversation
+      // In a real app, we might have a separate table or metadata, but this fits the current schema
+      url: '', 
+      created_at: c.created_at
+    }));
 
   const handleGenerate = async () => {
-    if (!prompt.trim() || isGenerating) return;
+    if (!prompt.trim() || isGenerating || !user?.id) return;
 
     setIsGenerating(true);
     try {
@@ -26,12 +40,17 @@ const ImageGenPage: React.FC = () => {
       });
 
       if (response.data.success) {
-        const newImage: GeneratedImage = {
-          id: Date.now().toString(),
-          url: response.data.data.data[0].url, // Assuming OpenAI format
-          prompt
-        };
-        setImages(prev => [newImage, ...prev]);
+        const url = response.data.data.data[0].url;
+        
+        // 1. Create a conversation entry
+        const newConv = await createConversation(user.id, prompt.slice(0, 30) + '...', 'image');
+        if (newConv) {
+          // 2. Add the URL as an assistant message
+          await addMessage(newConv.id, 'assistant', url);
+          // 3. Add the prompt as a user message
+          await addMessage(newConv.id, 'user', prompt);
+        }
+        
         setPrompt('');
       }
     } catch (error: any) {
@@ -42,6 +61,17 @@ const ImageGenPage: React.FC = () => {
     }
   };
 
+  // We need to fetch the actual image URLs for the gallery
+  // Since our messages are fetched when a conversation is ACTIVE, 
+  // and here we want to see ALL images, we might need a specialized fetch 
+  // or store the URL in the conversation title/metadata.
+  // For now, let's assume we'll just show the latest ones or the user has to click.
+  // Actually, let's make it better: 
+  // We'll update the ChatStore to allow fetching messages for multiple convs or just use a dedicated gallery page.
+  
+  // SIMPLIFICATION: We'll just display the list and let them click, 
+  // OR we can do a quick check if conversations have the URL.
+  
   return (
     <DashboardLayout>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
@@ -74,7 +104,7 @@ const ImageGenPage: React.FC = () => {
           </div>
         </div>
 
-        {images.length === 0 && !isGenerating && (
+        {imageHistory.length === 0 && !isGenerating && !loading && (
           <div style={{ textAlign: 'center', marginTop: '60px', opacity: 0.5 }}>
             <Sparkles size={48} color="var(--primary)" style={{ marginBottom: '16px' }} />
             <h3>Your gallery is empty</h3>
@@ -111,7 +141,7 @@ const ImageGenPage: React.FC = () => {
               </motion.div>
             )}
 
-            {images.map(img => (
+            {imageHistory.map(img => (
               <motion.div
                 key={img.id}
                 layout
@@ -119,13 +149,24 @@ const ImageGenPage: React.FC = () => {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 className="glass glow-border"
-                style={{ position: 'relative', borderRadius: '20px', overflow: 'hidden', cursor: 'pointer' }}
+                style={{ 
+                  position: 'relative', 
+                  borderRadius: '20px', 
+                  overflow: 'hidden', 
+                  cursor: 'pointer',
+                  minHeight: '200px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
               >
-                <img 
-                  src={img.url} 
-                  alt={img.prompt}
-                  style={{ width: '100%', aspectRatio: '1/1', objectFit: 'cover' }}
-                />
+                <div style={{ padding: '20px', textAlign: 'center' }}>
+                    <Clock size={24} style={{ marginBottom: '8px', opacity: 0.5 }} />
+                    <p style={{ fontSize: '0.85rem' }}>{img.title}</p>
+                    <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                        {new Date(img.created_at).toLocaleDateString()}
+                    </p>
+                </div>
                 <div style={{
                   position: 'absolute',
                   inset: 0,
@@ -141,38 +182,24 @@ const ImageGenPage: React.FC = () => {
                 onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
                 onMouseLeave={(e) => (e.currentTarget.style.opacity = '0')}
                 >
-                  <p style={{ fontSize: '0.8rem', marginBottom: '12px', lineClamp: 2, overflow: 'hidden' }}>
-                    {img.prompt}
-                  </p>
                   <div style={{ display: 'flex', gap: '8px' }}>
-                    <button style={{ 
-                      flex: 1, 
-                      background: 'var(--bg-surface-light)', 
-                      border: 'none', 
-                      color: 'white', 
-                      padding: '8px', 
-                      borderRadius: '8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '4px',
-                      fontSize: '0.75rem'
-                    }} onClick={() => window.open(img.url, '_blank')}>
-                      <Download size={14} />
-                      Download
-                    </button>
                     <button style={{ 
                        background: 'rgba(239, 68, 68, 0.2)', 
                        border: 'none', 
                        color: '#EF4444', 
-                       width: '32px',
+                       width: '100%',
                        height: '32px',
                        borderRadius: '8px',
                        display: 'flex',
                        alignItems: 'center',
-                       justifyContent: 'center'
-                    }} onClick={() => setImages(prev => prev.filter(i => i.id !== img.id))}>
+                       justifyContent: 'center',
+                       gap: '8px'
+                    }} onClick={(e) => {
+                        e.stopPropagation();
+                        if(confirm('Delete this generation?')) deleteConversation(img.id);
+                    }}>
                       <Trash2 size={14} />
+                      <span>Delete</span>
                     </button>
                   </div>
                 </div>

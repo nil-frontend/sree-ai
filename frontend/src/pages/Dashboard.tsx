@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Zap,
@@ -10,11 +10,13 @@ import {
   Sparkles,
   TrendingUp,
   Cpu,
-  Globe
+  Globe,
+  Clock
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '../features/dashboard/DashboardLayout';
 import { useAuthStore } from '../store/auth.store.ts';
+import { useChatStore } from '../store/chat.store';
 import styles from './Dashboard.module.css';
 
 const StatCard: React.FC<{
@@ -42,14 +44,37 @@ const StatCard: React.FC<{
 
 const Dashboard: React.FC = () => {
   const { user } = useAuthStore();
+  const { conversations, fetchConversations, loading } = useChatStore();
   const navigate = useNavigate();
 
-  const activities = [
-    { title: 'Chat query processed', time: '2m ago', icon: <MessageSquare size={18} /> },
-    { title: 'Neural image synthesized', time: '15m ago', icon: <ImageIcon size={18} /> },
-    { title: 'Voice engine initialized', time: '1h ago', icon: <Mic size={18} /> },
-    { title: 'Model weights updated', time: '3h ago', icon: <Cpu size={18} /> },
-  ];
+  useEffect(() => {
+    if (user?.id) {
+      fetchConversations(user.id);
+    }
+  }, [user?.id, fetchConversations]);
+
+  const recentActivities = conversations.slice(0, 4).map(c => ({
+    title: c.title,
+    time: formatDate(c.updated_at || c.created_at),
+    icon: c.type === 'voice' ? <Mic size={18} /> : 
+          c.type === 'image' ? <ImageIcon size={18} /> : 
+          <MessageSquare size={18} />,
+    id: c.id,
+    type: c.type
+  }));
+
+  function formatDate(dateString: string) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${diffDays}d ago`;
+  }
 
   return (
     <DashboardLayout>
@@ -103,9 +128,9 @@ const Dashboard: React.FC = () => {
                 { title: 'Voice AI', icon: <Mic />, path: '/dashboard/voice', color: '#F59E0B' },
               ].map((action) => (
                 <button 
-                  key={action.path}
-                  className={styles.actionCard}
-                  onClick={() => navigate(action.path)}
+                   key={action.path}
+                   className={styles.actionCard}
+                   onClick={() => navigate(action.path)}
                 >
                   <div className={styles.actionIcon} style={{ background: `${action.color}15`, color: action.color }}>
                     {React.cloneElement(action.icon as React.ReactElement<{ size: number }>, { size: 24 })}
@@ -123,13 +148,25 @@ const Dashboard: React.FC = () => {
               <Activity className="text-muted" size={20} />
             </div>
             <div className={styles.activityList}>
-              {activities.map((item, i) => (
-                <div key={i} className={styles.activityItem}>
+              {loading && conversations.length === 0 ? (
+                <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  Analyzing neural pathways...
+                </div>
+              ) : recentActivities.length === 0 ? (
+                <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  No recent activity found.
+                </div>
+              ) : recentActivities.map((item) => (
+                <div key={item.id} className={styles.activityItem} style={{ cursor: 'pointer' }} onClick={() => {
+                  const route = item.type === 'image' ? 'images' : (item.type || 'chat');
+                  navigate(`/dashboard/${route}`);
+                }}>
                   <div className={styles.activityIcon}>{item.icon}</div>
                   <div className={styles.activityContent}>
                     <div className={styles.activityTitle}>{item.title}</div>
                     <div className={styles.activityTime}>{item.time}</div>
                   </div>
+                  <Clock size={12} className="text-muted" style={{ marginLeft: 'auto', opacity: 0.5 }} />
                 </div>
               ))}
             </div>

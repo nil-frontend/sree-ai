@@ -10,12 +10,15 @@
 ### User Profile Sync
 - **SYNC-04**: Fetch user display name, avatar, and plan status (Free/Pro) from the `users` table.
 - **SYNC-05**: Profile card in sidebar must reflect real-time subscription status.
+- **SYNC-06**: Three-dot menu on hover for chat listings with delete action.
+- **SYNC-07**: Categorize and separate Voice AI chats from normal chats in the sidebar.
 
 ## 2. Interactive Features
 
 ### Session Management
 - **SESS-01**: "+ New Chat" button must trigger a route/helper to create a new record in the `conversations` table.
 - **SESS-02**: Handle empty states when a user has no previous history.
+- **SESS-03**: Conversations must only be persisted in the database after the first message is sent.
 
 ### User Actions
 - **ACT-01**: Implement "Logout" functionality using Supabase Auth.

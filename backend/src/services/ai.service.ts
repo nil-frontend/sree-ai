@@ -1,10 +1,9 @@
 import OpenAI from 'openai';
-import { decrypt } from '../utils/encryption';
 
 class AiService {
   private getNvidiaClient(apiKey: string) {
     return new OpenAI({
-      apiKey: decrypt(apiKey),
+      apiKey,
       baseURL: 'https://integrate.api.nvidia.com/v1',
     });
   }

@@ -3,7 +3,12 @@ import { Navbar } from '../../components/layout/Navbar';
 import { Sidebar } from '../../components/layout/Sidebar';
 import styles from './DashboardLayout.module.css';
 
+import { SettingsModal } from './SettingsModal';
+
 export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [isCollapsed, setIsCollapsed] = React.useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
+
   return (
     <div className={styles.container}>
       <div className="aurora-bg" />
@@ -11,12 +16,21 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
       <Navbar />
       
       <div className={styles.layoutBody}>
-        <Sidebar />
+        <Sidebar 
+          isCollapsed={isCollapsed} 
+          setIsCollapsed={setIsCollapsed} 
+          onOpenSettings={() => setIsSettingsOpen(true)}
+        />
         
-        <main className={styles.mainContent}>
+        <main className={`${styles.mainContent} ${isCollapsed ? styles.collapsed : ''}`}>
           {children}
         </main>
       </div>
+
+      <SettingsModal 
+        isOpen={isSettingsOpen} 
+        onClose={() => setIsSettingsOpen(false)} 
+      />
     </div>
   );
 };

@@ -1,6 +1,6 @@
 .sidebar {
-  width: 280px;
-  height: calc(100vh - 64px); /* Subtract Navbar height */
+  width: var(--sidebar-width);
+  height: calc(100vh - 64px);
   position: fixed;
   left: 0;
   top: 64px;
@@ -9,20 +9,62 @@
   display: flex;
   flex-direction: column;
   z-index: 40;
+  transition: width var(--transition-normal);
+}
+
+.sidebar.collapsed {
+  width: var(--sidebar-collapsed-width);
 }
 
 .topSection {
-  padding: 24px;
+  padding: 24px 16px;
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
+.topHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  width: 100%;
+}
+
+.brand {
+  font-size: 0.7rem;
+  font-weight: 800;
+  opacity: 0.3;
+  letter-spacing: 2px;
+  color: var(--text-primary);
+}
+
+.toggleBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.toggleBtn:hover {
+  background: var(--bg-surface-light);
+  color: var(--text-primary);
+}
+
 .newChatBtn {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 12px;
-  padding: 12px 16px;
+  padding: 12px;
+  min-height: 44px;
   background: var(--primary);
   color: white;
   border: none;
@@ -32,6 +74,7 @@
   cursor: pointer;
   transition: var(--transition-fast);
   box-shadow: 0 4px 15px var(--primary-glow);
+  overflow: hidden;
 }
 
 .newChatBtn:hover {
@@ -114,6 +157,7 @@
   text-align: left;
   cursor: pointer;
   transition: var(--transition-fast);
+  width: 100%;
 }
 
 .historyItem:hover {
@@ -132,6 +176,103 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: opacity var(--transition-fast);
+}
+
+.collapsed .topSection,
+.collapsed .historySection,
+.collapsed .bottomSection {
+  padding: 24px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.collapsed .topHeader {
+  justify-content: center;
+  margin-bottom: 0;
+}
+
+.collapsed .searchWrapper,
+.collapsed .typeSection .typeTitle,
+.collapsed .dateGroup .dateLabel,
+.collapsed .details,
+.collapsed .upgradeBtn {
+  display: none !important;
+}
+
+.historyItemWrapper {
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.collapsed .newChatBtn {
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+}
+
+.collapsed .historyItem {
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+}
+
+.collapsed .itemIcon {
+  margin: 0;
+  width: 20px;
+  height: 20px;
+}
+
+.collapsed .avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+}
+
+.collapsed .profileCard {
+  background: transparent;
+  border: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.collapsed .profileActions {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.collapsed .signOutBtn {
+  width: 48px;
+  height: 48px;
+}
+
+.collapsed .bottomLink {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.collapsed .arrow {
+  display: none;
 }
 
 .itemDate {
@@ -288,38 +429,111 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
-/* Custom Scrollbar for Sidebar */
-.historySection::-webkit-scrollbar {
-  width: 4px;
-}
-
-.historySection::-webkit-scrollbar-track {
+.menuBtn {
+  opacity: 0;
+  padding: 4px;
+  border-radius: 6px;
   background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.historySection::-webkit-scrollbar-thumb {
+.historyItem:hover .menuBtn {
+  opacity: 1;
+}
+
+.menuBtn:hover {
   background: var(--bg-surface-light);
+  color: var(--text-primary);
+}
+
+.collapsedToggleButton {
+  opacity: 1 !important;
+  color: var(--text-muted);
+  width: 40px;
+  height: 40px;
+  margin-bottom: 8px;
+}
+
+.collapsedToggleButton:hover {
+  color: var(--primary) !important;
+  background: var(--bg-surface-light);
+}
+
+.dropdown {
+  position: absolute;
+  right: 16px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
   border-radius: 10px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  z-index: 100;
+  padding: 6px;
+  min-width: 150px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.historySection::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
-}
-
-/* Custom Scrollbar for Sidebar */
-.historySection::-webkit-scrollbar {
-  width: 4px;
-}
-
-.historySection::-webkit-scrollbar-track {
+.menuAction {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 6px;
   background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  width: 100%;
+  text-align: left;
 }
 
-.historySection::-webkit-scrollbar-thumb {
-  background: var(--bg-surface-light);
-  border-radius: 10px;
+.menuAction:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
 }
 
-.historySection::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
+.deleteAction {
+  color: #EF4444 !important;
+}
+
+.deleteAction:hover {
+  background: rgba(239, 68, 68, 0.1) !important;
+}
+
+.dateGroup {
+  margin-top: 20px;
+}
+
+.dateLabel {
+  padding: 0 12px 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.typeSection {
+  margin-bottom: 24px;
+}
+
+.typeTitle {
+  padding: 0 12px 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  opacity: 0.9;
 }

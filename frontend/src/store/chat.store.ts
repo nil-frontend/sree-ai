@@ -5,6 +5,7 @@ export interface Conversation {
   id: string;
   user_id: string;
   title: string;
+  type: 'chat' | 'voice' | 'image';
   created_at: string;
   updated_at: string;
 }
@@ -26,8 +27,10 @@ interface ChatState {
   // Actions
   fetchConversations: (userId: string) => Promise<void>;
   setActiveConversation: (conversationId: string | null) => Promise<void>;
-  createConversation: (userId: string, title: string) => Promise<Conversation | null>;
-  addMessage: (conversationId: string, role: 'user' | 'assistant', content: string) => Promise<void>;
+  createConversation: (userId: string, title: string, type?: 'chat' | 'voice' | 'image') => Promise<Conversation | null>;
+  deleteConversation: (conversationId: string) => Promise<void>;
+  addMessage: (conversationId: string, role: 'user' | 'assistant' | 'system', content: string) => Promise<void>;
+  clearActiveConversation: () => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -67,10 +70,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  createConversation: async (userId: string, title: string) => {
+  createConversation: async (userId: string, title: string, type: 'chat' | 'voice' | 'image' = 'chat') => {
     const { data, error } = await supabase
       .from('conversations')
-      .insert([{ user_id: userId, title }])
+      .insert([{ user_id: userId, title, type }])
       .select()
       .single();
 
@@ -88,7 +91,25 @@ export const useChatStore = create<ChatState>((set, get) => ({
     return data;
   },
 
-  addMessage: async (conversationId: string, role: 'user' | 'assistant', content: string) => {
+  deleteConversation: async (conversationId: string) => {
+    const { error } = await supabase
+      .from('conversations')
+      .delete()
+      .eq('id', conversationId);
+
+    if (error) {
+      console.error('Error deleting conversation:', error);
+      return;
+    }
+
+    set(state => ({
+      conversations: state.conversations.filter(c => c.id !== conversationId),
+      activeConversation: state.activeConversation?.id === conversationId ? null : state.activeConversation,
+      messages: state.activeConversation?.id === conversationId ? [] : state.messages
+    }));
+  },
+
+  addMessage: async (conversationId: string, role: 'user' | 'assistant' | 'system', content: string) => {
     const { data, error } = await supabase
       .from('messages')
       .insert([{ conversation_id: conversationId, role, content }])
@@ -104,10 +125,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
       messages: [...state.messages, data],
     }));
 
-    // Update conversation timestamp
     await supabase
       .from('conversations')
       .update({ updated_at: new Date().toISOString() })
       .eq('id', conversationId);
+  },
+
+  clearActiveConversation: () => {
+    set({ activeConversation: null, messages: [] });
   }
 }));

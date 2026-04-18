@@ -2,9 +2,13 @@ import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mic, Square, Loader2, Volume2, Copy, CheckCircle2 } from 'lucide-react';
 import { DashboardLayout } from '../features/dashboard/DashboardLayout';
+import { useChatStore } from '../store/chat.store';
+import { useAuthStore } from '../store/auth.store';
 import { supabase } from '../lib/supabase';
 
 const VoicePage: React.FC = () => {
+  const { user } = useAuthStore();
+  const { createConversation, addMessage } = useChatStore();
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [transcript, setTranscript] = useState('');
@@ -48,7 +52,7 @@ const VoicePage: React.FC = () => {
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/ai/voice`, {
         method: 'POST',
         headers: {
@@ -60,6 +64,14 @@ const VoicePage: React.FC = () => {
       const data = await response.json();
       if (data.success) {
         setTranscript(data.data.text);
+
+        // Persist to Voice Library
+        if (user?.id) {
+          const conv = await createConversation(user.id, data.data.text.slice(0, 30) + '...', 'voice');
+          if (conv) {
+            await addMessage(conv.id, 'user', data.data.text);
+          }
+        }
       } else {
         throw new Error(data.message);
       }
@@ -85,11 +97,11 @@ const VoicePage: React.FC = () => {
           <p style={{ color: 'var(--text-secondary)' }}>Speak naturally. Sree AI understands every whisper.</p>
         </div>
 
-        <div className="glass" style={{ 
-          padding: '60px 40px', 
-          borderRadius: '32px', 
-          display: 'flex', 
-          flexDirection: 'column', 
+        <div className="glass" style={{
+          padding: '60px 40px',
+          borderRadius: '32px',
+          display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
           gap: '32px',
           marginBottom: '40px'
@@ -114,7 +126,7 @@ const VoicePage: React.FC = () => {
               )}
             </AnimatePresence>
 
-            <button 
+            <button
               onClick={isRecording ? stopRecording : startRecording}
               style={{
                 width: '100px',
@@ -164,12 +176,12 @@ const VoicePage: React.FC = () => {
                 <Volume2 size={18} />
                 <span style={{ fontSize: '0.8rem', fontWeight: 600, letterSpacing: '1px' }}>TRANSCRIPTION</span>
               </div>
-              <button 
+              <button
                 onClick={copyToClipboard}
-                style={{ 
-                  background: 'none', 
-                  border: 'none', 
-                  color: isCopied ? '#10B981' : 'var(--text-muted)', 
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: isCopied ? '#10B981' : 'var(--text-muted)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
