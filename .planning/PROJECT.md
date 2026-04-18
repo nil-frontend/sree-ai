@@ -1,26 +1,14 @@
 # Project: Sree AI
 
-## Milestone 1: Initialization (Completed)
-- Vite + React + TypeScript setup.
-- Backend Express scaffold.
-- Auth system integration (Supabase).
+## Current Milestone: v1.1 Advanced Voice AI & Unified Intelligence Navigation
 
-## Milestone 2: Functional Prototype (Completed)
-- Basic dashboard with Lucide icons.
-- Prototype pages for Chat, Voice, Images.
+**Goal:** Enhance the Voice AI experience with real-time functionality and implement persistent, ID-based routing for all conversations.
 
-## Milestone 3: Modern Premium AI SaaS Redesign (Completed)
-- Goal: Transform the UI into a high-end, futuristic dashboard.
-- Key Specs: Dark theme (#0F0F0F), Rounded corners (12-16px), Blue/Purple gradients.
-- Targeted Pages: Dashboard, Chat, Voice, Image, Video, Tools, Settings.
-
-## Milestone 4: Dynamic Integration & Supabase Sync (Current)
-- Goal: Connect the premium frontend to Supabase backend for real-time data sync and functional AI interactions.
-- Target features:
-  - Dynamic Sidebar (Sync chat history with Supabase `conversations` table)
-  - Functional "New Chat" button
-  - Dynamic Profile sync (Sync user data from `users` table)
-  - Functional Navigation & Settings actions
+**Target features:**
+- Functional Voice AI (Neural processing engine integration)
+- Context-Aware Sidebar (Dynamic filtering for voice vs chat)
+- Voice-to-Chat Transition (Italicized transcripts at `/dashboard/voice/chat/:id`)
+- ID-Based Routing (Unique descriptors for all neural sessions)
 
 ## Evolution
 This document evolves at phase transitions and milestone boundaries.
@@ -37,3 +25,5 @@ This document evolves at phase transitions and milestone boundaries.
 2. Core Value check — still the right priority?
 3. Audit Out of Scope — reasons still valid?
 4. Update Context with current state
+
+Last updated: 2026-04-18
