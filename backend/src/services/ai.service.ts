@@ -1,4 +1,7 @@
 import OpenAI from 'openai';
+import { DeepgramClient } from '@deepgram/sdk';
+import fs from 'fs';
+import { Readable } from 'stream';
 
 class AiService {
   private getNvidiaClient(apiKey: string) {
@@ -22,11 +25,6 @@ class AiService {
   async generateImage(apiKey: string, prompt: string, model: string = 'stabilityai/stable-diffusion-xl-base-1.0') {
     const openai = this.getNvidiaClient(apiKey);
     
-    // NVIDIA NIM uses the same completions endpoint for some image models or specific endpoints
-    // For now, let's assume a standard image generation call if supported, 
-    // or placeholder for the specific NVIDIA NIM Image API.
-    // NOTE: SDXL on NVIDIA NIM often uses the 'images/generations' endpoint if compatible.
-    
     return openai.images.generate({
       model,
       prompt,
@@ -35,13 +33,48 @@ class AiService {
     });
   }
 
-  async transcribeAudio(apiKey: string, file: any, model: string = 'nvidia/whisper-large-v3') {
-    const openai = this.getNvidiaClient(apiKey);
+  async generateSpeech(apiKey: string, input: string, model: string = 'aura-2-thalia-en') {
+    const deepgram = new DeepgramClient({ apiKey });
+
+    try {
+      const result = await deepgram.speak.v1.audio.generate({
+        text: input,
+        model,
+      });
+
+      // Use result.stream() and Readable.fromWeb as shown in the user's snippet
+      const webStream = (result as any).stream();
+      return Readable.fromWeb(webStream);
+    } catch (error: any) {
+      console.error('Deepgram TTS Detailed Error:', error);
+      throw new Error(`TTS generation failed: ${error.message}`);
+    }
+  }
+
+  async transcribeAudio(apiKey: string, filePath: string, model: string = 'nova-2') {
+    const deepgram = new DeepgramClient({ apiKey });
     
-    return openai.audio.transcriptions.create({
-      file,
-      model,
-    });
+    try {
+      const response = await deepgram.listen.v1.media.transcribeFile(
+        fs.readFileSync(filePath),
+        { 
+          model,
+          smart_format: true,
+          paragraphs: true,
+          utterances: true,
+          punctuate: true,
+        }
+      );
+
+      // Robust path checking for v3/v5 SDK response structures
+      const results = (response as any).results || (response as any).result?.results;
+      const transcript = results?.channels?.[0]?.alternatives?.[0]?.transcript || '';
+      
+      return { text: transcript };
+    } catch (error: any) {
+      console.error('Deepgram Transcription Error:', error.message);
+      throw error;
+    }
   }
 }
 

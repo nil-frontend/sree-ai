@@ -25,20 +25,23 @@ router.get('/profile', authMiddleware, async (req: any, res) => {
 // Update API Keys
 router.post('/settings/keys', authMiddleware, async (req: any, res) => {
   try {
-    const { nvidia_api_key } = req.body;
+    const { nvidia_api_key, deepgram_api_key, provider, key } = req.body;
     const userId = req.user.id;
 
-    if (!nvidia_api_key) {
-      return res.status(400).json({ success: false, message: 'API key is required' });
+    const finalProvider = provider || (nvidia_api_key ? 'nvidia' : (deepgram_api_key ? 'deepgram' : null));
+    const finalKey = key || nvidia_api_key || deepgram_api_key;
+
+    if (!finalKey || !finalProvider) {
+      return res.status(400).json({ success: false, message: 'Provider and API key are required' });
     }
 
-    const success = await ApiKeyService.saveUserApiKey(userId, 'nvidia', nvidia_api_key);
+    const success = await ApiKeyService.saveUserApiKey(userId, finalProvider, finalKey);
     
     if (!success) {
       throw new Error('Failed to encrypt or save API key');
     }
 
-    res.json({ success: true, message: 'API key updated successfully' });
+    res.json({ success: true, message: `${finalProvider} API key updated successfully` });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }

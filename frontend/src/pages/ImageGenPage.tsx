@@ -4,11 +4,13 @@ import { Image as ImageIcon, Wand2, Trash2, Loader2, Sparkles, Clock } from 'luc
 import { DashboardLayout } from '../features/dashboard/DashboardLayout';
 import { useChatStore } from '../store/chat.store';
 import { useAuthStore } from '../store/auth.store';
+import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 
 const ImageGenPage: React.FC = () => {
   const { user } = useAuthStore();
   const { conversations, fetchConversations, createConversation, addMessage, deleteConversation, loading } = useChatStore();
+  const navigate = useNavigate();
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -49,6 +51,8 @@ const ImageGenPage: React.FC = () => {
           await addMessage(newConv.id, 'assistant', url);
           // 3. Add the prompt as a user message
           await addMessage(newConv.id, 'user', prompt);
+          // Navigate to the image session
+          navigate(`/images/${newConv.id}`);
         }
         
         setPrompt('');

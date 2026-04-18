@@ -56,18 +56,42 @@ export const useChatStore = create<ChatState>((set, get) => ({
       return;
     }
 
-    const conv = get().conversations.find(c => c.id === conversationId);
-    if (conv) {
-      set({ activeConversation: conv, loading: true });
-      
-      const { data: messages } = await supabase
-        .from('messages')
+    set({ loading: true });
+
+    // Try to find in local state first
+    let conv = get().conversations.find(c => c.id === conversationId);
+
+    // If not in local state, fetch from DB (Deep linking support)
+    if (!conv) {
+      const { data, error } = await supabase
+        .from('conversations')
         .select('*')
-        .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: true });
+        .eq('id', conversationId)
+        .single();
       
-      set({ messages: messages || [], loading: false });
+      if (error || !data) {
+        console.error('Conversation not found:', error);
+        set({ activeConversation: null, messages: [], loading: false });
+        // Optional: navigate back or show error
+        return;
+      }
+      conv = data;
     }
+
+    set({ activeConversation: conv });
+
+    // Fetch messages for this conversation
+    const { data: messages, error: msgError } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('conversation_id', conversationId)
+      .order('created_at', { ascending: true });
+    
+    if (msgError) {
+      console.error('Error fetching messages:', msgError);
+    }
+    
+    set({ messages: messages || [], loading: false });
   },
 
   createConversation: async (userId: string, title: string, type: 'chat' | 'voice' | 'image' = 'chat') => {

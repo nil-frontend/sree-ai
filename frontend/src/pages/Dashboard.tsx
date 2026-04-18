@@ -123,9 +123,9 @@ const Dashboard: React.FC = () => {
             </div>
             <div className={styles.actionGrid}>
               {[
-                { title: 'AI Chat', icon: <MessageSquare />, path: '/dashboard/chat', color: '#3B82F6' },
-                { title: 'Image Gen', icon: <ImageIcon />, path: '/dashboard/images', color: '#8B5CF6' },
-                { title: 'Voice AI', icon: <Mic />, path: '/dashboard/voice', color: '#F59E0B' },
+                { title: 'AI Chat', icon: <MessageSquare />, path: '/chat', color: '#3B82F6' },
+                { title: 'Image Gen', icon: <ImageIcon />, path: '/images', color: '#8B5CF6' },
+                { title: 'Voice AI', icon: <Mic />, path: '/voice', color: '#F59E0B' },
               ].map((action) => (
                 <button 
                    key={action.path}
@@ -159,7 +159,7 @@ const Dashboard: React.FC = () => {
               ) : recentActivities.map((item) => (
                 <div key={item.id} className={styles.activityItem} style={{ cursor: 'pointer' }} onClick={() => {
                   const route = item.type === 'image' ? 'images' : (item.type || 'chat');
-                  navigate(`/dashboard/${route}`);
+                  navigate(`/${route}/${item.id}`);
                 }}>
                   <div className={styles.activityIcon}>{item.icon}</div>
                   <div className={styles.activityContent}>

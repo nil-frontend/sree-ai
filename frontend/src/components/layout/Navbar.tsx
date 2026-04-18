@@ -27,24 +27,24 @@ export const Navbar: React.FC = () => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   const navLinks = [
-    { to: '/dashboard/chat', icon: <MessageSquare size={18} />, label: 'Chat' },
-    { to: '/dashboard/voice', icon: <Mic size={18} />, label: 'Voice' },
-    { to: '/dashboard/images', icon: <ImageIcon size={18} />, label: 'Image' },
-    { to: '/dashboard/video', icon: <Video size={18} />, label: 'Video' },
+    { to: '/chat', icon: <MessageSquare size={18} />, label: 'Chat' },
+    { to: '/voice', icon: <Mic size={18} />, label: 'Voice' },
+    { to: '/images', icon: <ImageIcon size={18} />, label: 'Image' },
+    { to: '/video', icon: <Video size={18} />, label: 'Video' },
   ];
 
   const tools = [
-    { label: 'AI Humanizer', icon: <User size={16} />, to: '/dashboard/tools/humanizer' },
-    { label: 'Prompt Enhancer', icon: <Zap size={16} />, to: '/dashboard/tools/enhancer' },
-    { label: 'Doc Analyzer', icon: <FileText size={16} />, to: '/dashboard/tools/analyzer' },
-    { label: 'Image to PDF', icon: <ImagePlus size={16} />, to: '/dashboard/tools/image-to-pdf' },
-    { label: 'BG Remover', icon: <Eraser size={16} />, to: '/dashboard/tools/bg-remover' },
+    { label: 'AI Humanizer', icon: <User size={16} />, to: '/tools/humanizer' },
+    { label: 'Prompt Enhancer', icon: <Zap size={16} />, to: '/tools/enhancer' },
+    { label: 'Doc Analyzer', icon: <FileText size={16} />, to: '/tools/analyzer' },
+    { label: 'Image to PDF', icon: <ImagePlus size={16} />, to: '/tools/image-to-pdf' },
+    { label: 'BG Remover', icon: <Eraser size={16} />, to: '/tools/bg-remover' },
   ];
 
   return (
     <nav className={styles.navbar}>
       {/* Left: Logo */}
-      <Link to="/dashboard" className={styles.logoGroup}>
+      <Link to="/" className={styles.logoGroup}>
         <div className={styles.logoBox}>
           <Zap size={20} fill="currentColor" />
         </div>
@@ -128,14 +128,14 @@ export const Navbar: React.FC = () => {
                   <p className={styles.userRole}>Premium Member</p>
                 </div>
                 
-                <Link to="/dashboard/settings" className={styles.dropdownItem}>
+                <Link to="/settings" className={styles.dropdownItem}>
                   <div className={styles.itemContent}>
                     <ShieldCheck size={18} />
                     <span>Subscription</span>
                   </div>
                 </Link>
                 
-                <Link to="/dashboard/settings" className={styles.dropdownItem}>
+                <Link to="/settings" className={styles.dropdownItem}>
                   <div className={styles.itemContent}>
                     <Settings size={18} />
                     <span>Settings</span>

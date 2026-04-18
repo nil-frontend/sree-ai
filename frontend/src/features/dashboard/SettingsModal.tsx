@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, User, Zap, Shield, Key, RefreshCw, CheckCircle2, AlertCircle, Trash2 } from 'lucide-react';
+import { X, User, Zap, Shield, Key, RefreshCw, CheckCircle2, AlertCircle, Trash2, Save } from 'lucide-react';
 import { useAuthStore } from '../../store/auth.store';
 import api from '../../lib/api';
 import styles from './SettingsModal.module.css';
@@ -18,8 +18,11 @@ interface SettingsModalProps {
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const { user, updateProfile } = useAuthStore();
-  const [apiKey, setApiKey] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
+  const [apiKeys, setApiKeys] = useState({
+    nvidia: '',
+    deepgram: ''
+  });
+  const [isSaving, setIsSaving] = useState<string | null>(null);
   const [healthStatus, setHealthStatus] = useState<'idle' | 'checking' | 'ok' | 'error'>('idle');
   const [savedKeys, setSavedKeys] = useState<ApiKeyInfo[]>([]);
 
@@ -48,18 +51,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     }
   };
 
-  const handleSaveKey = async () => {
-    if (!apiKey.trim()) return;
-    setIsSaving(true);
+  const handleSaveKey = async (provider: 'nvidia' | 'deepgram') => {
+    const key = apiKeys[provider];
+    if (!key.trim()) return;
+    setIsSaving(provider);
     try {
-      await api.post('/user/settings/keys', { nvidia_api_key: apiKey });
-      alert('API Key saved successfully and encrypted.');
-      setApiKey('');
+      await api.post('/user/settings/keys', { provider, key });
+      alert(`${provider.toUpperCase()} API Key saved successfully and encrypted.`);
+      setApiKeys(prev => ({ ...prev, [provider]: '' }));
       fetchKeys();
     } catch (error) {
       alert('Error saving API key. Please try again.');
     } finally {
-      setIsSaving(false);
+      setIsSaving(null);
     }
   };
 
@@ -135,30 +139,44 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
               </div>
 
               <div className={styles.section}>
-                <div className={styles.sectionTitle}>Cognitive Connectivity</div>
-                <div className={styles.row} style={{ flexDirection: 'column', alignItems: 'stretch', gap: '16px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div className={styles.info}>
-                      <span className={styles.label}>NVIDIA API Key</span>
-                      <span className={styles.value}>Override system defaults with your personal key</span>
-                    </div>
-                    <Key size={20} className="text-muted" />
-                  </div>
-                  
+                <div className={styles.sectionTitle}>NVIDIA NIM (Chat & Vision)</div>
+                <div className={styles.row} style={{ flexDirection: 'column', alignItems: 'stretch', gap: '12px' }}>
                   <div style={{ display: 'flex', gap: '12px' }}>
                     <input 
                       type="password" 
                       placeholder="nvapi-..." 
                       className={styles.apiKeyInput}
-                      value={apiKey}
-                      onChange={(e) => setApiKey(e.target.value)}
+                      value={apiKeys.nvidia}
+                      onChange={(e) => setApiKeys(prev => ({ ...prev, nvidia: e.target.value }))}
                     />
                     <button 
                       className={`${styles.btn} ${styles.btnPrimary}`} 
-                      onClick={handleSaveKey}
-                      disabled={isSaving}
+                      onClick={() => handleSaveKey('nvidia')}
+                      disabled={isSaving !== null}
                     >
-                      {isSaving ? 'Saving...' : 'Save'}
+                      {isSaving === 'nvidia' ? '...' : <Save size={16} />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className={styles.section}>
+                <div className={styles.sectionTitle}>Deepgram (Voice & Audio)</div>
+                <div className={styles.row} style={{ flexDirection: 'column', alignItems: 'stretch', gap: '12px' }}>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <input 
+                      type="password" 
+                      placeholder="Deepgram Key..." 
+                      className={styles.apiKeyInput}
+                      value={apiKeys.deepgram}
+                      onChange={(e) => setApiKeys(prev => ({ ...prev, deepgram: e.target.value }))}
+                    />
+                    <button 
+                      className={`${styles.btn} ${styles.btnPrimary}`} 
+                      onClick={() => handleSaveKey('deepgram')}
+                      disabled={isSaving !== null}
+                    >
+                      {isSaving === 'deepgram' ? '...' : <Save size={16} />}
                     </button>
                   </div>
 
@@ -211,11 +229,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                     </span>
                   </div>
                   <button 
-                    className={styles.healthBtn} 
+                    className={`${styles.healthBtn} ${healthStatus === 'checking' ? styles.spinning : ''}`} 
                     onClick={checkHealth}
                     disabled={healthStatus === 'checking'}
                   >
-                    {healthStatus === 'checking' ? <RefreshCw size={18} className="animate-spin" /> : 
+                    {healthStatus === 'checking' ? <RefreshCw size={18} /> : 
                      healthStatus === 'ok' ? <CheckCircle2 size={18} color="var(--success)" /> : 
                      healthStatus === 'error' ? <AlertCircle size={18} color="var(--error)" /> : 
                      <RefreshCw size={18} />}

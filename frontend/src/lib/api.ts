@@ -14,4 +14,35 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
+export const aiService = {
+  generateSpeech: async (text: string, model?: string) => {
+    try {
+      const response = await api.post('/ai/tts', { text, model }, {
+        responseType: 'blob'
+      });
+      return response.data;
+    } catch (error: any) {
+      // If error is a blob (common when responseType is blob), convert it to text to see the message
+      if (error.response?.data instanceof Blob) {
+        const text = await error.response.data.text();
+        try {
+          const parsed = JSON.parse(text);
+          throw new Error(parsed.message || 'Failed to generate speech');
+        } catch (e) {
+          throw new Error('Failed to generate speech');
+        }
+      }
+      throw error;
+    }
+  },
+  transcribeAudio: async (formData: FormData) => {
+    const response = await api.post('/ai/voice', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+};
+
 export default api;

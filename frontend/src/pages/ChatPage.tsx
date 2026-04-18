@@ -7,6 +7,7 @@ import { DashboardLayout } from '../features/dashboard/DashboardLayout';
 import { supabase } from '../lib/supabase';
 import { useChatStore } from '../store/chat.store';
 import { useAuthStore } from '../store/auth.store';
+import { useParams, useNavigate } from 'react-router-dom';
 import styles from './ChatPage.module.css';
 
 const ChatPage: React.FC = () => {
@@ -16,8 +17,12 @@ const ChatPage: React.FC = () => {
     messages, 
     addMessage, 
     loading: chatLoading,
+    setActiveConversation,
     createConversation 
   } = useChatStore();
+  
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   
   const [input, setInput] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -27,6 +32,14 @@ const ChatPage: React.FC = () => {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  useEffect(() => {
+    if (id && id !== activeConversation?.id) {
+      setActiveConversation(id);
+    } else if (!id) {
+      setActiveConversation(null);
+    }
+  }, [id, setActiveConversation]);
 
   useEffect(() => {
     scrollToBottom();
@@ -47,9 +60,16 @@ const ChatPage: React.FC = () => {
 
     // 1. Create conversation if none active
     if (!currentConvId) {
-      const newConv = await createConversation(user.id, messageContent.slice(0, 40) + '...');
+      const isVoice = window.location.pathname.startsWith('/voice');
+      const newConv = await createConversation(
+        user.id, 
+        messageContent.slice(0, 40) + '...',
+        isVoice ? 'voice' : 'chat'
+      );
       if (!newConv) return;
       currentConvId = newConv.id;
+      // Redirect to the new conversation URL
+      navigate(isVoice ? `/voice/chat/${newConv.id}` : `/chat/${newConv.id}`, { replace: true });
     }
 
     // 2. Add user message locally and to DB
@@ -162,7 +182,10 @@ const ChatPage: React.FC = () => {
                     {m.role === 'assistant' ? <Bot size={20} /> : <User size={20} />}
                   </div>
                   <div className={`${styles.bubble} ${m.role === 'assistant' ? styles.ai : styles.user}`}>
-                    <div className={styles.markdown}>
+                    <div 
+                      className={styles.markdown}
+                      style={activeConversation?.type === 'voice' ? { fontStyle: 'italic' } : {}}
+                    >
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>
                         {m.content}
                       </ReactMarkdown>

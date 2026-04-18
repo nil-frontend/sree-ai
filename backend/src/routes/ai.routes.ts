@@ -83,23 +83,29 @@ router.post('/voice', authMiddleware, upload.single('file'), async (req: any, re
       return res.status(400).json({ success: false, message: 'Audio file is required' });
     }
 
-    const nvidiaApiKey = await ApiKeyService.getUserApiKey(userId, 'nvidia');
+    const deepgramApiKey = await ApiKeyService.getUserApiKey(userId, 'deepgram');
 
-    if (!nvidiaApiKey) {
+    if (!deepgramApiKey) {
       return res.status(400).json({ 
         success: false, 
-        message: 'NVIDIA API Key not found. Please add it in settings.' 
+        message: 'Deepgram API Key not found. Please add it in settings.' 
       });
     }
 
-    const fileStream = fs.createReadStream(file.path);
-    const result = await aiService.transcribeAudio(nvidiaApiKey, fileStream);
+    console.log(`Processing voice transcription: ${file.originalname} (${file.size} bytes, ${file.mimetype})`);
 
-    fs.unlinkSync(file.path);
+    const result = await aiService.transcribeAudio(deepgramApiKey, file.path);
+
+    if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
     res.json({ success: true, data: result });
   } catch (error: any) {
-    if (req.file) fs.unlinkSync(req.file.path);
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Transcription Route Error:', error.response?.data || error.message);
+    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    
+    const status = error.response?.status || 500;
+    const message = error.response?.data?.message || error.message || 'Internal Server Error';
+    
+    res.status(status).json({ success: false, message });
   }
 });
 
@@ -121,6 +127,38 @@ router.post('/save-api-key', authMiddleware, async (req: any, res) => {
       res.status(500).json({ success: false, message: 'Failed to save API key' });
     }
   } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Text to Speech
+router.post('/tts', authMiddleware, async (req: any, res) => {
+  try {
+    const { text, model } = req.body;
+    const userId = req.user.id;
+
+    if (!text) {
+      return res.status(400).json({ success: false, message: 'Text is required' });
+    }
+
+    const deepgramApiKey = await ApiKeyService.getUserApiKey(userId, 'deepgram');
+
+    if (!deepgramApiKey) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Deepgram API Key not found. Please add it in settings.' 
+      });
+    }
+
+    const stream: any = await aiService.generateSpeech(deepgramApiKey, text, model);
+    
+    // Set response headers for audio stream
+    res.setHeader('Content-Type', 'audio/mpeg');
+    
+    // Pipe the stream to the res
+    stream.pipe(res);
+  } catch (error: any) {
+    console.error('TTS Error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });

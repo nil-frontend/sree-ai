@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../../store/auth.store';
 import { useChatStore, type Conversation } from '../../store/chat.store';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import styles from './Sidebar.module.css';
 import { PanelLeft } from 'lucide-react';
 
@@ -39,6 +39,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, o
     loading 
   } = useChatStore();
   const navigate = useNavigate();
+  const location = useLocation();
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -68,17 +69,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, o
     };
   }, [menuOpenId]);
 
+  const isVoiceContext = location.pathname.startsWith('/voice');
+
   const handleNewChat = () => {
     clearActiveConversation();
-    navigate('/dashboard/chat');
+    if (isVoiceContext) {
+      navigate('/voice');
+    } else {
+      navigate('/chat');
+    }
   };
 
   const handleSelectConversation = (id: string) => {
     setActiveConversation(id);
     const conv = conversations.find(c => c.id === id);
-    if (conv?.type === 'voice') navigate('/dashboard/voice');
-    else if (conv?.type === 'image') navigate('/dashboard/images');
-    else navigate('/dashboard/chat');
+    if (conv?.type === 'voice') navigate('/voice');
+    else if (conv?.type === 'image') navigate('/images');
+    else navigate('/chat');
   };
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
@@ -144,10 +151,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, o
           <div className={styles.historyList}>
             {groupItems.map((item) => (
               <div key={item.id} className={styles.historyItemWrapper}>
-                <button 
+                <div 
                   className={`${styles.historyItem} ${activeConversation?.id === item.id ? styles.active : ''}`}
                   onClick={() => handleSelectConversation(item.id)}
                   title={isCollapsed ? item.title : undefined}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      handleSelectConversation(item.id);
+                    }
+                  }}
                 >
                   {item.type === 'voice' ? <Mic size={18} className={styles.itemIcon} /> : 
                    item.type === 'image' ? <ImageIcon size={18} className={styles.itemIcon} /> : 
@@ -166,7 +180,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, o
                       </button>
                     </>
                   )}
-                </button>
+                </div>
                 
                 {menuOpenId === item.id && (
                   <div className={styles.dropdown}>
@@ -200,11 +214,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, o
           </button>
         </div>
 
-        <button className={styles.newChatBtn} onClick={handleNewChat} title="New Chat">
+        <button className={styles.newChatBtn} onClick={handleNewChat} title={isVoiceContext ? "New Conversation" : "New Chat"}>
           <Plus size={22} strokeWidth={2.5} />
           {!isCollapsed && (
             <>
-              <span style={{ marginLeft: '4px' }}>New Chat</span>
+              <span style={{ marginLeft: '4px' }}>{isVoiceContext ? "New Conversation" : "New Chat"}</span>
               <div className={styles.cmd}>⌘K</div>
             </>
           )}
@@ -215,7 +229,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, o
             <Search size={16} className={styles.searchIcon} />
             <input 
               type="text" 
-              placeholder="Search history..." 
+              placeholder={isVoiceContext ? "Search library..." : "Search history..."} 
               className={styles.searchInput}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -225,39 +239,57 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, o
       </div>
 
       <div className={styles.historySection}>
-        <div className={styles.typeSection}>
-          {!isCollapsed && (
-            <div className={styles.typeTitle}>
-              <MessageCircle size={16} />
-              <span>Chat History</span>
+        {!isVoiceContext ? (
+          <>
+            <div className={styles.typeSection}>
+              {!isCollapsed && (
+                <div className={styles.typeTitle}>
+                  <MessageCircle size={16} />
+                  <span>Chat History</span>
+                </div>
+              )}
+              {loading && conversations.length === 0 ? (
+                <div className={styles.loadingState}>Loading...</div>
+              ) : chatConversations.length === 0 ? (
+                !isCollapsed && <div className={styles.emptyState}>No chats yet</div>
+              ) : renderList(chatConversations)}
             </div>
-          )}
-          {loading && conversations.length === 0 ? (
-            <div className={styles.loadingState}>Loading...</div>
-          ) : chatConversations.length === 0 ? (
-            !isCollapsed && <div className={styles.emptyState}>No chats yet</div>
-          ) : renderList(chatConversations)}
-        </div>
 
-        <div className={styles.typeSection}>
-          {!isCollapsed && voiceConversations.length > 0 && (
-            <div className={styles.typeTitle}>
-              <Mic size={16} />
-              <span>Voice Library</span>
+            <div className={styles.typeSection}>
+              {!isCollapsed && voiceConversations.length > 0 && (
+                <div className={styles.typeTitle}>
+                  <Mic size={16} />
+                  <span>Voice Library</span>
+                </div>
+              )}
+              {renderList(voiceConversations)}
             </div>
-          )}
-          {renderList(voiceConversations)}
-        </div>
 
-        <div className={styles.typeSection}>
-          {!isCollapsed && imageConversations.length > 0 && (
-            <div className={styles.typeTitle}>
-              <ImageIcon size={16} />
-              <span>Image Gallery</span>
+            <div className={styles.typeSection}>
+              {!isCollapsed && imageConversations.length > 0 && (
+                <div className={styles.typeTitle}>
+                  <ImageIcon size={16} />
+                  <span>Image Gallery</span>
+                </div>
+              )}
+              {renderList(imageConversations)}
             </div>
-          )}
-          {renderList(imageConversations)}
-        </div>
+          </>
+        ) : (
+          <div className={styles.typeSection}>
+            {!isCollapsed && (
+              <div className={styles.typeTitle}>
+                <Mic size={16} />
+                <span>Voice Recordings</span>
+              </div>
+            )}
+            {loading && conversations.length === 0 ? (
+              <div className={styles.loadingState}>Loading...</div>
+            ) : voiceConversations.length === 0 ? (
+              !isCollapsed && <div className={styles.emptyState}>No recordings yet</div>
+            ) : renderList(voiceConversations)}
+          </div>
+        )}
       </div>
 
       <div className={styles.bottomSection}>

@@ -26,7 +26,7 @@ function App() {
 
         {/* Protected Dashboard Routes */}
         <Route
-          path="/dashboard"
+          path="/"
           element={
             <ProtectedRoute>
               <Dashboard />
@@ -34,7 +34,7 @@ function App() {
           }
         />
         <Route
-          path="/dashboard/chat"
+          path="/chat/:id?"
           element={
             <ProtectedRoute>
               <ChatPage />
@@ -42,7 +42,7 @@ function App() {
           }
         />
         <Route
-          path="/dashboard/voice"
+          path="/voice"
           element={
             <ProtectedRoute>
               <VoicePage />
@@ -50,7 +50,15 @@ function App() {
           }
         />
         <Route
-          path="/dashboard/images"
+          path="/voice/chat/:id?"
+          element={
+            <ProtectedRoute>
+              <ChatPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/images"
           element={
             <ProtectedRoute>
               <ImageGenPage />
@@ -58,7 +66,7 @@ function App() {
           }
         />
         <Route
-          path="/dashboard/settings"
+          path="/settings"
           element={
             <ProtectedRoute>
               <SettingsPage />
@@ -67,7 +75,6 @@ function App() {
         />
 
         {/* Redirects */}
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
