@@ -83,9 +83,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, o
   const handleSelectConversation = (id: string) => {
     setActiveConversation(id);
     const conv = conversations.find(c => c.id === id);
-    if (conv?.type === 'voice') navigate('/voice');
-    else if (conv?.type === 'image') navigate('/images');
-    else navigate('/chat');
+    if (conv?.type === 'image') navigate('/images');
+    else navigate(`/chat/${id}`);
   };
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
@@ -259,7 +258,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, o
               {!isCollapsed && voiceConversations.length > 0 && (
                 <div className={styles.typeTitle}>
                   <Mic size={16} />
-                  <span>Voice Library</span>
+                  <span>Voice Conversations</span>
                 </div>
               )}
               {renderList(voiceConversations)}
@@ -280,7 +279,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, o
             {!isCollapsed && (
               <div className={styles.typeTitle}>
                 <Mic size={16} />
-                <span>Voice Recordings</span>
+                <span>Voice Conversations</span>
               </div>
             )}
             {loading && conversations.length === 0 ? (

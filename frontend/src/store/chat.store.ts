@@ -15,6 +15,7 @@ export interface Message {
   conversation_id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
+  metadata?: any;
   created_at: string;
 }
 
@@ -29,7 +30,7 @@ interface ChatState {
   setActiveConversation: (conversationId: string | null) => Promise<void>;
   createConversation: (userId: string, title: string, type?: 'chat' | 'voice' | 'image') => Promise<Conversation | null>;
   deleteConversation: (conversationId: string) => Promise<void>;
-  addMessage: (conversationId: string, role: 'user' | 'assistant' | 'system', content: string) => Promise<void>;
+  addMessage: (conversationId: string, role: 'user' | 'assistant' | 'system', content: string, metadata?: any) => Promise<void>;
   clearActiveConversation: () => void;
 }
 
@@ -133,10 +134,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }));
   },
 
-  addMessage: async (conversationId: string, role: 'user' | 'assistant' | 'system', content: string) => {
+  addMessage: async (conversationId: string, role: 'user' | 'assistant' | 'system', content: string, metadata: any = {}) => {
     const { data, error } = await supabase
       .from('messages')
-      .insert([{ conversation_id: conversationId, role, content }])
+      .insert([{ conversation_id: conversationId, role, content, metadata }])
       .select()
       .single();
 

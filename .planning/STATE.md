@@ -1,30 +1,22 @@
-# State: Milestone 5 - Phase 5.3 INITIATED
+# Current State: Integrated Voice & Chat Implementation
 
-## Current Position
-Phase: 5.3 - Voice AI Interaction & Visualizer
-Plan: (TBD)
-Status: Completed Phase 5.1 (Routing), 5.2 (Sidebar Filtering), and 5.4 (UI Polish).
-Last activity: 2026-04-18 — Finalized unprefixed routing and context-aware session management.
+## Active Focus
+- Milestone: v1.2
+- Goal: Merge Voice Immersive Mode into the Chat history view.
 
-## Current Status
-- Milestone 4 completed successfully.
-- Phase 5.1: Routing & ID-based State (100%) - All routes flattened, lazy session sync implemented.
-- Phase 5.2: SideBar Context Filtering (100%) - Sidebar dynamically filters by context.
-- Phase 5.4: Voice-to-Chat Handoff & UI Polish (100%) - Automated handoff and italic transcripts implemented.
-- Phase 5.3: Voice AI Interaction & Visualizer (0%) - Starting work on streaming and visual feedback.
+## Progress (Milestone v1.2)
+- [ ] Phase 1: Route Optimization (0%)
+- [ ] Phase 2: UI Synthesis (0%)
+- [ ] Phase 3: Polish & Continuity (0%)
 
-## Progress Tracking
-- [x] Phase 5.1: Routing & ID-based State (100%)
-- [x] Phase 5.2: SideBar Context Filtering (100%)
-- [ ] Phase 5.3: Voice AI Interaction & Visualizer (0%)
-- [x] Phase 5.4: Voice-to-Chat Handoff & UI Polish (100%)
+## Key Successes
+- VAD logic fixed and highly sensitive.
+- Conversation store integrated with voice mode context.
+- Persistent sidebar navigation to `/voice/chat/:id`.
 
-## Blockers
+## Current Blockers
 - None.
 
-## Accumulated Context
-- Routing is now flat (no /dashboard prefix).
-- Sessions are created lazily after the first message.
-- "Voice" and "Chat" contexts are segregated in the UI.
-- All voice transcripts are styled as italics.
-
+## Remaining Work for Milestone v1.2
+- Combine `ChatPage` and `VoicePage` UI components.
+- Fix route transition on 1st message.

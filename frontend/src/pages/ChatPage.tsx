@@ -9,6 +9,8 @@ import { useChatStore } from '../store/chat.store';
 import { useAuthStore } from '../store/auth.store';
 import { useParams, useNavigate } from 'react-router-dom';
 import styles from './ChatPage.module.css';
+import { VoiceOverlay } from '../components/voice/VoiceOverlay';
+import { useLocation } from 'react-router-dom';
 
 const ChatPage: React.FC = () => {
   const { user } = useAuthStore();
@@ -23,6 +25,14 @@ const ChatPage: React.FC = () => {
   
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  const isVoiceRoute = location.pathname.startsWith('/voice');
+  const [showVoiceOverlay, setShowVoiceOverlay] = useState(isVoiceRoute);
+
+  useEffect(() => {
+    setShowVoiceOverlay(location.pathname.startsWith('/voice'));
+  }, [location.pathname]);
   
   const [input, setInput] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -60,7 +70,7 @@ const ChatPage: React.FC = () => {
 
     // 1. Create conversation if none active
     if (!currentConvId) {
-      const isVoice = window.location.pathname.startsWith('/voice');
+      const isVoice = location.pathname.startsWith('/voice');
       const newConv = await createConversation(
         user.id, 
         messageContent.slice(0, 40) + '...',
@@ -73,7 +83,7 @@ const ChatPage: React.FC = () => {
     }
 
     // 2. Add user message locally and to DB
-    await addMessage(currentConvId, 'user', messageContent);
+    await addMessage(currentConvId, 'user', messageContent, { mode: 'text' });
     setInput('');
     setIsGenerating(true);
     setStreamingMessage('');
@@ -129,7 +139,7 @@ const ChatPage: React.FC = () => {
       }
 
       // 3. Save assistant message to DB
-      await addMessage(currentConvId, 'assistant', assistantMessage);
+      await addMessage(currentConvId, 'assistant', assistantMessage, { mode: 'text' });
 
     } catch (error: any) {
       console.error('Chat Error:', error);
@@ -184,7 +194,7 @@ const ChatPage: React.FC = () => {
                   <div className={`${styles.bubble} ${m.role === 'assistant' ? styles.ai : styles.user}`}>
                     <div 
                       className={styles.markdown}
-                      style={activeConversation?.type === 'voice' ? { fontStyle: 'italic' } : {}}
+                      style={m.metadata?.mode === 'voice' ? { fontStyle: 'italic' } : {}}
                     >
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>
                         {m.content}
@@ -230,7 +240,11 @@ const ChatPage: React.FC = () => {
               disabled={isGenerating}
             />
             <div className={styles.inputActions}>
-              <button className={styles.iconBtn}>
+              <button 
+                className={styles.iconBtn}
+                title="Launch Voice Mode"
+                onClick={() => navigate(id ? `/voice/chat/${id}` : '/voice')}
+              >
                 <Mic size={20} />
               </button>
               <button className={styles.iconBtn}>
@@ -247,6 +261,15 @@ const ChatPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {showVoiceOverlay && (
+          <VoiceOverlay 
+            initialConversationId={id} 
+            onClose={() => navigate(id ? `/chat/${id}` : '/chat')} 
+          />
+        )}
+      </AnimatePresence>
     </DashboardLayout>
   );
 };

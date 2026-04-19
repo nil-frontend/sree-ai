@@ -1,162 +1,203 @@
 import React, { useEffect, useRef } from 'react';
+import { audioGraph } from '../../lib/audio';
 
 interface VoiceVisualizerProps {
-  stream: MediaStream | null;
-  isRecording: boolean;
+  stream?: MediaStream | null;
+  audioElement?: HTMLAudioElement | null;
+  isActive: boolean;
+  isGray?: boolean;
 }
 
-export const VoiceVisualizer: React.FC<VoiceVisualizerProps> = ({ stream, isRecording }) => {
+export const VoiceVisualizer: React.FC<VoiceVisualizerProps> = ({
+  stream,
+  audioElement,
+  isActive,
+  isGray = false
+}) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
   const analyzerRef = useRef<AnalyserNode | null>(null);
   const animationRef = useRef<number | null>(null);
+  const particlesRef = useRef<any[]>([]);
 
-  // Helper to safely get CSS variables
-  const getCSSVar = (name: string, fallback: string) => {
-    try {
-      if (typeof window === 'undefined') return fallback;
-      const val = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-      return val || fallback;
-    } catch (e) {
-      return fallback;
+  // Audio state smoothing
+  const smoothedLevelRef = useRef(0);
+
+  useEffect(() => {
+    // Initialize particles once for the 3D sphere
+    const particleCount = 600; // Optimal density vs performance
+    const particles = [];
+    for (let i = 0; i < particleCount; i++) {
+      const theta = Math.random() * 2 * Math.PI;
+      const phi = Math.acos(2 * Math.random() - 1);
+      particles.push({
+        theta,
+        phi,
+        speedTheta: (Math.random() - 0.5) * 0.013,
+        speedPhi: (Math.random() - 0.5) * 0.008,
+        baseHue: 200 + Math.random() * 60, // Blues and Purples
+        size: Math.random() * 1.5 + 0.5,
+      });
     }
-  };
+    particlesRef.current = particles;
+  }, []);
 
   useEffect(() => {
     if (!canvasRef.current || !containerRef.current) return;
     const canvas = canvasRef.current;
     const container = containerRef.current;
-    
+
     const handleResize = () => {
       const rect = container.getBoundingClientRect();
-      if (rect.width > 0 && rect.height > 0) {
-        canvas.width = rect.width;
-        canvas.height = rect.height;
-      }
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      const ctx = canvas.getContext('2d');
+      if (ctx) ctx.scale(dpr, dpr);
     };
 
     const resizeObserver = new ResizeObserver(handleResize);
     resizeObserver.observe(container);
     handleResize();
 
-    return () => {
-      resizeObserver.disconnect();
-    };
+    return () => resizeObserver.disconnect();
   }, []);
 
   useEffect(() => {
-    let isActive = true;
+    let active = true;
 
-    if (isRecording && stream) {
-      const initAudio = async () => {
-        try {
-          const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-          if (!AudioCtx) return;
+    const initAudio = async () => {
+      try {
+        let analyzer: AnalyserNode | null = null;
 
-          const ctx = new AudioCtx();
-          audioContextRef.current = ctx;
+        if (stream || audioElement) {
+          await audioGraph.resume();
+          const ctx = audioGraph.getContext();
+          const key = stream || audioElement!;
+          const sourceNode = audioGraph.getSource(key);
 
-          if (ctx.state === 'suspended') {
-            await ctx.resume();
+          if (sourceNode) {
+            analyzer = ctx.createAnalyser();
+            analyzer.fftSize = 128;
+            analyzer.smoothingTimeConstant = 0.8;
+            analyzerRef.current = analyzer;
+            sourceNode.connect(analyzer);
+          }
+        }
+
+        const dataArray = analyzer ? new Uint8Array(analyzer.frequencyBinCount) : null;
+        let rotation = 0;
+
+        const draw = () => {
+          if (!active || !canvasRef.current || !isActive) return;
+
+          const canvas = canvasRef.current;
+          const ctxCanvas = canvas.getContext('2d');
+          if (!ctxCanvas) return;
+
+          const dpr = window.devicePixelRatio || 1;
+          const width = canvas.width / dpr;
+          const height = canvas.height / dpr;
+
+          let currentLevel = 0;
+          if (analyzer && dataArray) {
+            analyzer.getByteFrequencyData(dataArray);
+            const sum = dataArray.reduce((acc, val) => acc + val, 0);
+            currentLevel = sum / dataArray.length / 255;
+          } else {
+            // Subtle breathing effect when idle
+            currentLevel = (Math.sin(Date.now() / 1000) + 1) * 0.02;
           }
 
-          const source = ctx.createMediaStreamSource(stream);
-          const analyzer = ctx.createAnalyser();
-          analyzer.fftSize = 256; // Smaller for smoother performance
-          analyzerRef.current = analyzer;
-          source.connect(analyzer);
+          smoothedLevelRef.current += (currentLevel - smoothedLevelRef.current) * 0.15;
+          const level = smoothedLevelRef.current;
 
-          const bufferLength = analyzer.frequencyBinCount;
-          const dataArray = new Uint8Array(bufferLength);
-          const primaryColor = getCSSVar('--primary', '#3B82F6');
+          ctxCanvas.clearRect(0, 0, width, height);
+          ctxCanvas.save();
+          ctxCanvas.translate(width / 2, height / 2);
 
-          const draw = () => {
-            if (!isActive || !canvasRef.current || !analyzerRef.current || !isRecording) return;
-            
-            const canvas = canvasRef.current;
-            const drawCtx = canvas.getContext('2d');
-            if (!drawCtx) return;
+          rotation += 0.002 + level * 0.012;
+          const baseRadius = Math.min(width, height) * 0.20;
+          const dynamicRadius = baseRadius * (1 + level * 3.8);
 
-            analyzerRef.current.getByteFrequencyData(dataArray);
+          // Inner Glow
+          const glowGrade = ctxCanvas.createRadialGradient(0, 0, 0, 0, 0, dynamicRadius);
+          const glowHue = isGray ? 0 : 215;
+          const glowSat = isGray ? '0%' : '100%';
+          glowGrade.addColorStop(0, `hsla(${glowHue}, ${glowSat}, 65%, ${0.03 + level * 0.15})`);
+          glowGrade.addColorStop(1, 'transparent');
+          ctxCanvas.fillStyle = glowGrade;
+          ctxCanvas.beginPath();
+          ctxCanvas.arc(0, 0, dynamicRadius * 2, 0, Math.PI * 2);
+          ctxCanvas.fill();
 
-            const width = canvas.width;
-            const height = canvas.height;
-            if (width === 0 || height === 0) {
-              animationRef.current = requestAnimationFrame(draw);
-              return;
+          // 3D Particles
+          particlesRef.current.forEach(p => {
+            p.theta += p.speedTheta;
+            p.phi += p.speedPhi;
+
+            const x = dynamicRadius * Math.sin(p.phi) * Math.cos(p.theta + rotation);
+            const y = dynamicRadius * Math.sin(p.phi) * Math.sin(p.theta + rotation);
+            const z = dynamicRadius * Math.cos(p.phi);
+
+            const perspective = 500;
+            const scale = perspective / (perspective + z);
+            const px = x * scale;
+            const py = y * scale;
+
+            const isFront = z < 0;
+            const zFactor = (z + dynamicRadius) / (dynamicRadius * 2);
+            const opacity = 0.25 + zFactor * 0.75;
+            const size = p.size * scale * (1 + level * 1.4);
+
+            const hue = isGray ? 0 : (p.baseHue + level * 30);
+            const sat = isGray ? '0%' : '85%';
+            ctxCanvas.fillStyle = `hsla(${hue}, ${sat}, 75%, ${opacity})`;
+
+            if (isFront && level > 0.05 && !isGray) {
+              ctxCanvas.shadowBlur = size * 3;
+              ctxCanvas.shadowColor = `hsla(${hue}, 85%, 75%, 0.4)`;
+            } else {
+              ctxCanvas.shadowBlur = 0;
             }
 
-            drawCtx.clearRect(0, 0, width, height);
+            ctxCanvas.beginPath();
+            ctxCanvas.arc(px, py, size, 0, Math.PI * 2);
+            ctxCanvas.fill();
+          });
 
-            let sum = 0;
-            for (let i = 0; i < dataArray.length; i++) {
-              sum += dataArray[i];
-            }
-            const average = sum / dataArray.length;
-            const vol = Math.pow(average / 128, 1.2); 
+          ctxCanvas.restore();
+          animationRef.current = requestAnimationFrame(draw);
+        };
 
-            const time = Date.now() / 1000;
+        draw();
+      } catch (err) {
+        console.error('Audio Visualizer error:', err);
+      }
+    };
 
-            const drawWave = (amplitude: number, frequency: number, phase: number, color: string | CanvasGradient, lineWidth: number) => {
-              drawCtx.beginPath();
-              drawCtx.strokeStyle = color;
-              drawCtx.lineWidth = lineWidth;
-              drawCtx.lineCap = 'round';
-              
-              for (let x = 0; x <= width; x += 5) {
-                const tapering = Math.pow(Math.sin((x / width) * Math.PI), 2);
-                const y = height / 2 + 
-                          Math.sin(x * frequency + phase) * 
-                          amplitude * vol * tapering;
-                
-                if (x === 0) drawCtx.moveTo(x, y);
-                else drawCtx.lineTo(x, y);
-              }
-              drawCtx.stroke();
-            };
-
-            // Background layers
-            drawWave(60, 0.012, time * 1.5, 'rgba(59, 130, 246, 0.1)', 1);
-            drawWave(40, 0.018, time * -2, 'rgba(139, 92, 246, 0.15)', 1);
-            
-            // Primary dynamic wave
-            const grad = drawCtx.createLinearGradient(0, 0, width, 0);
-            grad.addColorStop(0, 'rgba(59, 130, 246, 0)');
-            grad.addColorStop(0.5, primaryColor);
-            grad.addColorStop(1, 'rgba(59, 130, 246, 0)');
-            
-            drawWave(30, 0.025, time * 4, grad, 2);
-
-            animationRef.current = requestAnimationFrame(draw);
-          };
-
-          draw();
-        } catch (err) {
-          console.error('Audio Visualizer error:', err);
-        }
-      };
-
-      initAudio();
-    }
+    initAudio();
 
     return () => {
-      isActive = false;
+      active = false;
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
-      if (audioContextRef.current) {
-        audioContextRef.current.close().catch(() => {});
-        audioContextRef.current = null;
+      if (analyzerRef.current) {
+        try {
+          const key = stream || audioElement!;
+          const sourceNode = audioGraph.getSource(key);
+          if (sourceNode) sourceNode.disconnect(analyzerRef.current);
+        } catch (e) { }
       }
       analyzerRef.current = null;
     };
-  }, [isRecording, stream]);
+  }, [isActive, stream, audioElement, isGray]);
 
   return (
-    <div 
+    <div
       ref={containerRef}
-      style={{ 
-        position: 'absolute', 
-        inset: -150, 
+      style={{
+        position: 'absolute',
+        inset: 0,
         zIndex: 0,
         pointerEvents: 'none',
         display: 'flex',
@@ -170,23 +211,10 @@ export const VoiceVisualizer: React.FC<VoiceVisualizerProps> = ({ stream, isReco
         style={{
           width: '100%',
           height: '100%',
-          opacity: isRecording ? 1 : 0,
-          transition: 'opacity 0.5s ease',
-          filter: 'blur(1px)'
+          opacity: isActive ? (isGray ? 0.4 : 1) : 0,
+          transition: 'opacity 0.8s ease-in-out',
         }}
       />
-      
-      {/* Background Ambience */}
-      <div style={{
-          position: 'absolute',
-          width: '100%',
-          height: '100px',
-          background: 'radial-gradient(ellipse at center, var(--primary-glow) 0%, transparent 70%)',
-          opacity: isRecording ? 0.2 : 0,
-          transition: 'opacity 0.5s ease',
-          zIndex: -1,
-          filter: 'blur(40px)'
-      }} />
     </div>
   );
 };

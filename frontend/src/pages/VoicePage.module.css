@@ -1,0 +1,225 @@
+.voicePageContainer {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-dark);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.visualizerWrapper {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.contentOverlay {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  pointer-events: none;
+}
+
+.contentOverlay * {
+  pointer-events: auto;
+}
+
+.topBar {
+  position: absolute;
+  top: 40px;
+  right: 40px;
+  z-index: 20;
+}
+
+.closeButton {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.closeButton:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #EF4444;
+  color: #EF4444;
+  transform: rotate(90deg);
+}
+
+.transcriptArea {
+  position: absolute;
+  bottom: 120px;
+  max-width: 600px;
+  width: 90%;
+  text-align: center;
+}
+
+.userText {
+  font-size: 1.8rem;
+  font-weight: 500;
+  color: white;
+  line-height: 1.4;
+  text-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+.aiResponseArea {
+  position: absolute;
+  bottom: 40px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 0 40px;
+}
+
+.aiText {
+  font-size: 1.2rem;
+  color: var(--primary);
+  max-width: 800px;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 12px 24px;
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(var(--primary-rgb), 0.2);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.statusIndicator {
+  position: absolute;
+  top: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 100px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+
+.statusDot.listening {
+  background: #10B981;
+  box-shadow: 0 0 10px #10B981;
+  animation: dotPulse 1.5s infinite;
+}
+
+.statusDot.thinking {
+  background: var(--primary);
+  box-shadow: 0 0 10px var(--primary);
+  animation: dotPulse 1.5s infinite;
+}
+
+.statusDot.speaking {
+  background: #6366F1;
+  box-shadow: 0 0 10px #6366F1;
+  animation: dotPulse 1.5s infinite;
+}
+
+@keyframes dotPulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.5); opacity: 0.5; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.animatedTranscript {
+  position: fixed;
+  pointer-events: none;
+  z-index: 50;
+  color: white;
+  font-size: 1.8rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+.voiceRecordBtn {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  z-index: 10;
+  position: relative;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  background: transparent;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btnInner {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--bg-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 2;
+  transition: all 0.3s ease;
+}
+
+.voiceRecordBtn.active .btnInner {
+  background: #EF4444;
+  color: white;
+}
+
+.btnPulse {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: rgba(var(--primary-rgb), 0.3);
+  z-index: 1;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: translate(-50%, -50%) scale(1); opacity: 0.6; }
+  100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
+}
+
+.streamingCursor {
+  display: inline-block;
+  width: 3px;
+  height: 1.2em;
+  background-color: var(--primary);
+  margin-left: 4px;
+  vertical-align: middle;
+  animation: blink 0.8s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}

@@ -158,8 +158,12 @@ const Dashboard: React.FC = () => {
                 </div>
               ) : recentActivities.map((item) => (
                 <div key={item.id} className={styles.activityItem} style={{ cursor: 'pointer' }} onClick={() => {
-                  const route = item.type === 'image' ? 'images' : (item.type || 'chat');
-                  navigate(`/${route}/${item.id}`);
+                  if (item.type === 'voice') {
+                    navigate(`/voice/chat/${item.id}`);
+                  } else {
+                    const route = item.type === 'image' ? 'images' : (item.type || 'chat');
+                    navigate(`/${route}/${item.id}`);
+                  }
                 }}>
                   <div className={styles.activityIcon}>{item.icon}</div>
                   <div className={styles.activityContent}>

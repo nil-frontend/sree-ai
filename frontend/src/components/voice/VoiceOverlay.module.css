@@ -1,0 +1,147 @@
+.overlayContainer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  background: radial-gradient(circle at center, rgba(10, 20, 40, 0.4) 0%, rgba(5, 5, 5, 0.6) 100%);
+  backdrop-filter: blur(12px) saturate(150%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 24px;
+  margin: 1rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.visualizerWrapper {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.topBar {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  display: flex;
+  gap: 1rem;
+}
+
+.closeButton {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.closeButton:hover {
+  background: rgba(255, 59, 48, 0.2);
+  border-color: rgba(255, 59, 48, 0.5);
+  transform: rotate(90deg);
+}
+
+.statusIndicator {
+  position: absolute;
+  bottom: 3rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 100px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.statusDot.listening { background: #3b82f6; box-shadow: 0 0 10px #3b82f6; }
+.statusDot.thinking { background: #a855f7; box-shadow: 0 0 10px #a855f7; }
+.statusDot.speaking { background: #10b981; box-shadow: 0 0 10px #10b981; }
+.statusDot.idle { background: #6b7280; }
+
+.contentOverlay {
+  position: relative;
+  z-index: 10;
+  max-width: 800px;
+  width: 90%;
+  text-align: center;
+}
+
+.transcriptArea {
+  margin-bottom: 2rem;
+}
+
+.userText {
+  font-size: 1.8rem;
+  font-weight: 500;
+  color: white;
+  margin: 0;
+  line-height: 1.4;
+  opacity: 0.9;
+}
+
+.animatedTranscript {
+  position: fixed;
+  font-size: 2rem;
+  font-weight: 600;
+  color: #3b82f6;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 100;
+}
+
+.aiResponseArea {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 2.5rem;
+  border-radius: 2rem;
+  backdrop-filter: blur(10px);
+}
+
+.aiText {
+  font-size: 1.4rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.9);
+  text-align: left;
+}
+
+.streamingCursor {
+  display: inline-block;
+  width: 2px;
+  background: #3b82f6;
+  margin-left: 4px;
+  animation: blink 0.8s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}

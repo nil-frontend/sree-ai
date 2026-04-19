@@ -1,11 +1,10 @@
 import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useAuthStore } from './store/auth.store.ts';
+import { useAuthStore } from './store/auth.store';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import Dashboard from './pages/Dashboard';
 import ChatPage from './pages/ChatPage';
-import VoicePage from './pages/VoicePage';
 import ImageGenPage from './pages/ImageGenPage';
 import SettingsPage from './pages/SettingsPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -45,7 +44,7 @@ function App() {
           path="/voice"
           element={
             <ProtectedRoute>
-              <VoicePage />
+              <ChatPage />
             </ProtectedRoute>
           }
         />

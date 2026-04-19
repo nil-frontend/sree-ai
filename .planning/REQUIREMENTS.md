@@ -1,43 +1,30 @@
-# Requirements: Milestone 5 — Advanced Voice AI & Unified Intelligence Navigation
+# Milestone v1.2: Integrated Voice & Chat UX Requirements
 
-## 1. 🎙️ AI Voice Processing
+## Core Objective
+Unify the "Immersive Voice" and "Detailed Chat" views into a single cohesive interface where voice interactions happen directly over the chat history.
 
-### Voice Engine
-- **VOICE-01**: Functional Voice AI integration. Must handle microphone input, real-time transcription (stt), and AI response streaming.
-- **VOICE-02**: Real-time voice activity visualization. Implement small, animated UI elements that react dynamically to audio input (Perplexity-style "breathing" or "pulsing" dots).
+## Functional Requirements
+1. **Dynamic Navigation Transition**
+   - Start session at `/voice`.
+   - After the 1st voice transcription is processed and a conversation ID is generated, the URL must automatically update to `/voice/:id` without interrupting the audio/recording flow.
+   - Subsequent voice messages in the same session must persist on that same ID.
 
-## 2. 🧭 Sidebar & Navigation Intelligence
+2. **UI Integration: Voice-over-Chat**
+   - The `/voice/:id` page should render the `ChatPage` content (messages list) as the background.
+   - The `VoiceVisualizer` and status overlays should be rendered as a glassmorphic or semi-transparent layer ON TOP of the chats.
+   - As voice is processed, messages should appear in real-time in the background chat log.
 
-### Contextual Filtering
-- **NAV-01**: Dynamic Sidebar Filtering. When on the Voice page, the history sidebar must ONLY show conversations where `type === 'voice'`. When on Chat, show `type === 'chat'`.
-- **NAV-02**: Session Persistence. Clicking a history item must load the specific session ID and restore the conversation state.
+3. **Session Management**
+   - Provide a "Reset Search" or "New Voice Session" button to quickly clear context and return to `/voice`.
+   - Support resuming any existing conversation in "Integrated Voice Mode" by navigating to `/voice/:id`.
 
-## 3. 🛣️ Advanced Routing & Session Handoff
+## Technical Constraints
+- **State Management**: Use `useChatStore` for message persistence.
+- **VAD Stability**: Ensure the active MediaRecorder session survives route/state changes if necessary (or re-initialize seamlessly).
+- **Z-Index Strategy**: Sidebar and header should stay accessible OR be dimmed during active voice interaction.
 
-### URL Identifiers
-- **ROUT-01**: Implement URL-based session tracking for standard chats: `/dashboard/chat/:id`.
-- **ROUT-02**: Implement URL-based session tracking for voice handoffs: `/dashboard/voice/chat/:id`.
-
-### User Experience Handoff
-- **ROUT-03**: Post-Voice Transcript View. After a voice conversation ends, automatically navigate to `/dashboard/voice/chat/:id`.
-- **ROUT-04**: Transcript Aesthetics. On the voice chat handoff page, the transcript text must be styled in **Italic** to distinguish it from manual chat text.
-
-## 4. 📊 Data Architecture
-
-### Logical Segregation
-- **DATA-01**: Strict data segregation between `chat` and `voice` types in the `conversations` table.
-- **DATA-02**: Ensure the sidebar "New Chat" vs "New Voice Session" correctly initializes the `type` column.
-
-## 5. Traceability Matrix
-
-| REQ-ID | Phase | Status |
-|--------|-------|--------|
-| VOICE-01| 5.3   | Pending|
-| VOICE-02| 5.3   | Pending|
-| NAV-01 | 5.2   | Pending|
-| NAV-02 | 5.4   | Pending|
-| ROUT-01| 5.1   | Pending|
-| ROUT-02| 5.1   | Pending|
-| ROUT-03| 5.4   | Pending|
-| ROUT-04| 5.4   | Pending|
-| DATA-01| 5.2   | Pending|
+## Success Criteria
+- [ ] Clicking "Mic" in Chat detail enters Integrated Mode.
+- [ ] URL updates from `/voice` to `/voice/:id` on 1st message.
+- [ ] User can see chat history scrolling behind the voice circle.
+- [ ] AI voice response is synced with the background message appearing.

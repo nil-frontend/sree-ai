@@ -1,14 +1,14 @@
 # Project: Sree AI
 
-## Current Milestone: v1.1 Advanced Voice AI & Unified Intelligence Navigation
+## Current Milestone: v1.2 Integrated Voice & Chat UX
 
-**Goal:** Enhance the Voice AI experience with real-time functionality and implement persistent, ID-based routing for all conversations.
+**Goal:** Merge the immersive voice visualizer with the chat history for a seamless, unified interaction experience with dynamic route transitions.
 
 **Target features:**
-- Functional Voice AI (Neural processing engine integration)
-- Context-Aware Sidebar (Dynamic filtering for voice vs chat)
-- Voice-to-Chat Transition (Italicized transcripts at `/dashboard/voice/chat/:id`)
-- ID-Based Routing (Unique descriptors for all neural sessions)
+- Consolidate Voice AI as an overlay within the chat interface.
+- Implement dynamic routing transition from `/voice` to `/voice/:id`.
+- Synchronized voice-activated chat logs (real-time message streaming behind the visualizer).
+- One-click "New Voice Session" reset.
 
 ## Evolution
 This document evolves at phase transitions and milestone boundaries.
@@ -26,4 +26,4 @@ This document evolves at phase transitions and milestone boundaries.
 3. Audit Out of Scope — reasons still valid?
 4. Update Context with current state
 
-Last updated: 2026-04-18
+Last updated: 2026-04-19
