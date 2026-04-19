@@ -13,5 +13,11 @@
     "shared:build": "npm run build -w shared",
     "backend:dev": "npm run dev -w backend",
     "frontend:dev": "npm run dev -w frontend"
+  },
+  "devDependencies": {
+    "@types/dotenv": "^6.1.1",
+    "@types/node": "^25.6.0",
+    "dotenv": "^17.4.2",
+    "ts-node": "^10.9.2"
   }
 }

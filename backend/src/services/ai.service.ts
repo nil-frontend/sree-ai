@@ -4,6 +4,8 @@ import fs from 'fs';
 import { Readable } from 'stream';
 
 class AiService {
+  private readonly DEFAULT_SYSTEM_PROMPT = "You are Sree Ai, You are build by the NilStudio, You are a professional AI assistant. You are helpful, concise, and friendly. Always provide accurate information and maintain a supportive tone. Always use callback at the end of the response";
+
   private getNvidiaClient(apiKey: string) {
     return new OpenAI({
       apiKey,
@@ -14,9 +16,15 @@ class AiService {
   async streamChat(apiKey: string, messages: any[], model: string = 'meta/llama-3.1-70b-instruct') {
     const openai = this.getNvidiaClient(apiKey);
 
+    // Prepend system prompt if not present
+    const hasSystemPrompt = messages.some(m => m.role === 'system');
+    const finalMessages = hasSystemPrompt
+      ? messages
+      : [{ role: 'system', content: this.DEFAULT_SYSTEM_PROMPT }, ...messages];
+
     return openai.chat.completions.create({
       model,
-      messages,
+      messages: finalMessages,
       stream: true,
       max_tokens: 1024,
     });
@@ -24,7 +32,7 @@ class AiService {
 
   async generateImage(apiKey: string, prompt: string, model: string = 'stabilityai/stable-diffusion-xl-base-1.0') {
     const openai = this.getNvidiaClient(apiKey);
-    
+
     return openai.images.generate({
       model,
       prompt,
@@ -53,11 +61,11 @@ class AiService {
 
   async transcribeAudio(apiKey: string, filePath: string, model: string = 'nova-2') {
     const deepgram = new DeepgramClient({ apiKey });
-    
+
     try {
       const response = await deepgram.listen.v1.media.transcribeFile(
         fs.readFileSync(filePath),
-        { 
+        {
           model,
           smart_format: true,
           paragraphs: true,
@@ -69,7 +77,7 @@ class AiService {
       // Robust path checking for v3/v5 SDK response structures
       const results = (response as any).results || (response as any).result?.results;
       const transcript = results?.channels?.[0]?.alternatives?.[0]?.transcript || '';
-      
+
       return { text: transcript };
     } catch (error: any) {
       console.error('Deepgram Transcription Error:', error.message);

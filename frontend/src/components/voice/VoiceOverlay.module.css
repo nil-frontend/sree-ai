@@ -109,7 +109,7 @@
 }
 
 .animatedTranscript {
-  position: fixed;
+  position: absolute;
   font-size: 2rem;
   font-weight: 600;
   color: #3b82f6;
@@ -139,6 +139,36 @@
   background: #3b82f6;
   margin-left: 4px;
   animation: blink 0.8s infinite;
+}
+
+.loadingArea {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 60px;
+  transform-style: preserve-3d;
+  will-change: transform, opacity;
+}
+
+.loadingText {
+  font-size: 1.2rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
+  letter-spacing: 0.8px;
+  text-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+}
+
+.dots {
+  display: inline-block;
+  margin-left: 4px;
+  font-weight: bold;
+  color: #a855f7;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
 }
 
 @keyframes blink {

@@ -49,6 +49,7 @@ export const VoiceOverlay: React.FC<VoiceOverlayProps> = ({ onClose, initialConv
   const [aiResponse, setAiResponse] = useState('');
   const [displayedAiResponse, setDisplayedAiResponse] = useState('');
   const [showFlyingTranscript, setShowFlyingTranscript] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('');
 
   // Refs for VAD and Audio
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -58,23 +59,45 @@ export const VoiceOverlay: React.FC<VoiceOverlayProps> = ({ onClose, initialConv
   const animationFrameRef = useRef<number | null>(null);
 
   const SILENCE_THRESHOLD = 20; // Increased from 5 to ignore more background noise
-  const SILENCE_DURATION = 3000; // 3 seconds as requested
+  const SILENCE_DURATION = 2000; // 2 seconds as requested
 
   const recordingStartTimeRef = useRef<number>(0);
 
-  const isMounted = useRef(true);
+  const typewriter = (text: string, callback: (t: string) => void, speed = 5) => {
+    return new Promise<void>((resolve) => {
+      let i = 0;
+      const interval = setInterval(() => {
+        callback(text.slice(0, i + 1));
+        i++;
+        if (i >= text.length) {
+          clearInterval(interval);
+          resolve();
+        }
+      }, speed);
+    });
+  };
 
-  useEffect(() => {
-    isMounted.current = true;
-    return () => {
-      isMounted.current = false;
-    };
-  }, []);
+  const loadingSequence = useRef<any>(null);
+  const startLoadingMessages = () => {
+    const messages = ["Received your Request", "Ai is processing", "It's Ready"];
+    let index = 0;
+    setLoadingMessage(messages[0]);
+    loadingSequence.current = setInterval(() => {
+      index = (index + 1) % messages.length;
+      setLoadingMessage(messages[index]);
+    }, 4000);
+  };
 
-  const streamRef = useRef<MediaStream | null>(null);
+  const stopLoadingMessages = () => {
+    if (loadingSequence.current) {
+      clearInterval(loadingSequence.current);
+      loadingSequence.current = null;
+    }
+    setLoadingMessage('');
+  };
 
   const startRecording = useCallback(async () => {
-    if (!isSessionActive || !isMounted.current) return;
+    if (!isSessionActive) return;
 
     try {
       setTranscript('');
@@ -88,15 +111,7 @@ export const VoiceOverlay: React.FC<VoiceOverlayProps> = ({ onClose, initialConv
           autoGainControl: true
         }
       });
-
-      // If we unmounted while waiting for the mic, stop it immediately
-      if (!isMounted.current) {
-        audioStream.getTracks().forEach(t => t.stop());
-        return;
-      }
-
       setStream(audioStream);
-      streamRef.current = audioStream;
 
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       const source = audioContext.createMediaStreamSource(audioStream);
@@ -129,7 +144,7 @@ export const VoiceOverlay: React.FC<VoiceOverlayProps> = ({ onClose, initialConv
       let hasSpoken = false;
 
       const checkSilence = () => {
-        if (!isMounted.current || !analyserRef.current || !mediaRecorderRef.current || mediaRecorderRef.current.state !== 'recording') return;
+        if (!analyserRef.current || !mediaRecorderRef.current || mediaRecorderRef.current.state !== 'recording') return;
 
         analyserRef.current.getByteFrequencyData(dataArray);
 
@@ -145,10 +160,10 @@ export const VoiceOverlay: React.FC<VoiceOverlayProps> = ({ onClose, initialConv
         }
         const avgSpeechEnergy = speechEnergy / count;
 
-        if (avgSpeechEnergy > SILENCE_THRESHOLD + 90) {
+        if (avgSpeechEnergy > SILENCE_THRESHOLD + 70) {
           lastSpeakTime = Date.now();
           hasSpoken = true;
-
+          // console.log(avgSpeechEnergy)
 
         } else {
           // Only stop if we've actually detected some speech first, 
@@ -166,32 +181,18 @@ export const VoiceOverlay: React.FC<VoiceOverlayProps> = ({ onClose, initialConv
 
       checkSilence();
     } catch (err) {
-      if (isMounted.current) {
-        console.error('Microphone Access Error:', err);
-        setStatus('idle');
-      }
+      console.error('Microphone Access Error:', err);
+      setStatus('idle');
     }
   }, [isSessionActive]);
 
   const stopRecording = () => {
-    // 1. Stop the media recorder if it's currently active
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.stop();
-    }
-
-    // 2. Clean up UI states and animation loops
-    setIsRecording(false);
-    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-
-    // 3. CRITICAL: Explicitly stop all stream tracks to release the hardware mic
-    const activeStream = streamRef.current || stream;
-    if (activeStream) {
-      activeStream.getTracks().forEach(track => {
-        track.stop();
-        track.enabled = false;
-      });
+      setIsRecording(false);
+      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+      stream?.getTracks().forEach(track => track.stop());
       setStream(null);
-      streamRef.current = null;
     }
   };
 
@@ -220,48 +221,196 @@ export const VoiceOverlay: React.FC<VoiceOverlayProps> = ({ onClose, initialConv
       const data = await aiService.transcribeAudio(formData);
 
       if (data.success) {
-        const userText = data.data.text;
-        setTranscript(userText);
-        setShowFlyingTranscript(true);
-        setTimeout(() => setShowFlyingTranscript(false), 1000);
+        const userText = data.data.text?.trim() || '';
 
+        if (!userText) {
+          const fallbackText = "can you say it again? if you are asking me anything, because, i can't hear anything!!!";
+          setDisplayedAiResponse(fallbackText);
+          setStatus('speaking');
+
+          const audioBlob = await aiService.generateSpeech(fallbackText);
+          const url = URL.createObjectURL(audioBlob);
+
+          if (audioRef.current) {
+            audioRef.current.src = url;
+            audioRef.current.onended = () => {
+              setStatus('listening');
+              setDisplayedAiResponse('');
+              setTimeout(startRecording, 500);
+            };
+            audioRef.current.play();
+          }
+          return;
+        }
+
+        // 1. Start AI Request in parallel
+        const chatRequestPromise = (async () => {
+          const { data: { session } } = await supabase.auth.getSession();
+          return fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/ai/chat`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session?.access_token}`,
+            },
+            body: JSON.stringify({
+              messages: [...messagesRef.current.map(m => ({ role: m.role, content: m.content })), { role: 'user', content: userText }],
+              model: 'meta/llama-3.1-70b-instruct',
+            }),
+          });
+        })();
+
+        // 2. Stream User Text UI in parallel
+        setTranscript('');
         setStatus('thinking');
+        startLoadingMessages();
+        
+        await typewriter(userText, setTranscript, 20);
 
-        const { data: { session } } = await supabase.auth.getSession();
-        const chatResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/ai/chat`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session?.access_token}`,
-          },
-          body: JSON.stringify({
-            messages: [...messagesRef.current.map(m => ({ role: m.role, content: m.content })), { role: 'user', content: userText }],
-            model: 'meta/llama-3.1-70b-instruct',
-          }),
-        });
+        // Trigger "sent to AI" animation
+        setShowFlyingTranscript(true);
+        setTimeout(() => {
+          setShowFlyingTranscript(false);
+          setTranscript('');
+        }, 2000);
+
+        const chatResponse = await chatRequestPromise;
 
         const reader = chatResponse.body?.getReader();
         const decoder = new TextDecoder();
         let fullAiText = '';
+        let typewriterActive = false;
+        let readerDone = false;
 
-        while (true) {
-          const { done, value } = await reader!.read();
-          if (done) break;
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split('\n');
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const dataStr = line.replace('data: ', '');
-              if (dataStr === '[DONE]') break;
-              try {
-                const parsed = JSON.parse(dataStr);
-                if (parsed.content) {
-                  fullAiText += parsed.content;
-                  setDisplayedAiResponse(prev => prev + parsed.content);
-                }
-              } catch (e) { }
+        const sentenceQueue: string[] = [];
+        const audioQueue: { text: string; url: string | null; blob: Blob | null }[] = [];
+        let isProcessingQueue = false;
+
+        const processPlaybackQueue = async () => {
+          if (isProcessingQueue) return;
+          isProcessingQueue = true;
+          stopLoadingMessages();
+          setStatus('speaking');
+
+          let playedIndex = 0;
+          while (true) {
+            if (playedIndex < audioQueue.length) {
+              const item = audioQueue[playedIndex];
+
+              // If audio is not ready yet, wait
+              if (!item.url) {
+                await new Promise(r => setTimeout(r, 100));
+                continue;
+              }
+
+              // Sync: Play audio and start typewriter for this sentence
+              if (audioRef.current) {
+                audioRef.current.src = item.url;
+                const audioPromise = new Promise(resolve => {
+                  audioRef.current!.onended = resolve;
+                });
+                audioRef.current.play();
+
+                // Type this specific sentence
+                const startText = fullAiText.slice(0, fullAiText.indexOf(item.text) + item.text.length);
+                const prevText = fullAiText.slice(0, fullAiText.indexOf(item.text));
+
+                // Update displayed response up to previous sentences if needed
+                setDisplayedAiResponse(prevText);
+                await typewriter(item.text, (val) => setDisplayedAiResponse(prevText + val), 20);
+
+                await audioPromise;
+              }
+
+              playedIndex++;
+            } else {
+              if (readerDone && playedIndex >= audioQueue.length) break;
+              await new Promise(r => setTimeout(r, 100));
             }
           }
+
+          isProcessingQueue = false;
+          setStatus('listening');
+          setTimeout(startRecording, 500);
+        };
+
+        const cleanTextForTTS = (text: string) => {
+          return text.replace(/[*\/()]/g, '').trim();
+        };
+
+        const fetchSentenceAudio = async (text: string, index: number) => {
+          try {
+            const cleaned = cleanTextForTTS(text);
+            if (!cleaned) {
+              audioQueue[index] = { text, url: '', blob: null };
+              return;
+            }
+            const blob = await aiService.generateSpeech(cleaned);
+            const url = URL.createObjectURL(blob);
+            audioQueue[index] = { text, url, blob };
+          } catch (err) {
+            console.error('Sentence TTS error:', err);
+            // On error, mark as "ready" with no URL to skip
+            audioQueue[index] = { text, url: '', blob: null };
+          }
+        };
+
+        let currentSentence = '';
+        const processStream = async () => {
+          try {
+            while (true) {
+              const { done, value } = await reader!.read();
+              if (done) {
+                readerDone = true;
+                // Process final sentence if any
+                if (currentSentence.trim()) {
+                  const s = currentSentence.trim();
+                  audioQueue.push({ text: s, url: null, blob: null });
+                  fetchSentenceAudio(s, audioQueue.length - 1);
+                }
+                break;
+              }
+
+              const chunk = decoder.decode(value, { stream: true });
+              const lines = chunk.split('\n');
+              for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                  const dataStr = line.replace('data: ', '');
+                  if (dataStr === '[DONE]') break;
+                  try {
+                    const parsed = JSON.parse(dataStr);
+                    if (parsed.content) {
+                      const content = parsed.content;
+                      fullAiText += content;
+                      currentSentence += content;
+
+                      // Sentence detection: ., !, ?, or \n
+                      if (/[.!?\n]/.test(content)) {
+                        const s = currentSentence.trim();
+                        if (s) {
+                          const sentenceIdx = audioQueue.length;
+                          audioQueue.push({ text: s, url: null, blob: null });
+                          fetchSentenceAudio(s, sentenceIdx);
+                          if (!isProcessingQueue) processPlaybackQueue();
+                        }
+                        currentSentence = '';
+                      }
+                    }
+                  } catch (e) { }
+                }
+              }
+            }
+          } catch (err) {
+            console.error('Stream read error:', err);
+            readerDone = true;
+          }
+        };
+
+        // Start everything in parallel
+        await processStream();
+
+        // Wait for final playback to finish
+        while (isProcessingQueue) {
+          await new Promise(r => setTimeout(r, 100));
         }
 
         setAiResponse(fullAiText);
@@ -280,22 +429,8 @@ export const VoiceOverlay: React.FC<VoiceOverlayProps> = ({ onClose, initialConv
             await addMessage(currentConvId, 'user', userText, { mode: 'voice' });
             await addMessage(currentConvId, 'assistant', fullAiText, { mode: 'voice' });
 
-            // Navigate if it's the first message of a new conversation
             if (!initialConversationId && currentConvId) {
               navigate(`/voice/chat/${currentConvId}`, { replace: true });
-            }
-
-            setStatus('speaking');
-            const audioBlob = await aiService.generateSpeech(fullAiText);
-            const url = URL.createObjectURL(audioBlob);
-
-            if (audioRef.current) {
-              audioRef.current.src = url;
-              audioRef.current.onended = () => {
-                setStatus('listening');
-                setTimeout(startRecording, 500);
-              };
-              audioRef.current.play();
             }
           }
         }
@@ -321,7 +456,6 @@ export const VoiceOverlay: React.FC<VoiceOverlayProps> = ({ onClose, initialConv
     const timer = setTimeout(startRecording, 1000);
     return () => {
       clearTimeout(timer);
-      stopRecording(); // CRITICAL: Stop recording and release mic on unmount
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
     };
   }, [startRecording]);
@@ -372,9 +506,9 @@ export const VoiceOverlay: React.FC<VoiceOverlayProps> = ({ onClose, initialConv
 
           {showFlyingTranscript && (
             <motion.div
-              initial={{ opacity: 1, x: '-50%', y: '300px', scale: 1 }}
-              animate={{ opacity: 0, x: '-50%', y: '0px', scale: 0.2 }}
-              transition={{ duration: 0.8, ease: 'backIn' }}
+              initial={{ opacity: 1, x: '-50%', y: '100px', scale: 1 }}
+              animate={{ opacity: 0, x: '-50%', y: '-200px', scale: 0.5 }}
+              transition={{ duration: 1.5, ease: 'easeInOut' }}
               className={styles.animatedTranscript}
               style={{ left: '50%' }}
             >
@@ -383,16 +517,45 @@ export const VoiceOverlay: React.FC<VoiceOverlayProps> = ({ onClose, initialConv
           )}
         </AnimatePresence>
 
+        <AnimatePresence mode="wait">
+          {loadingMessage && (
+            <motion.div
+              key={loadingMessage}
+              initial={{ opacity: 0, y: 40, rotateX: 90 }}
+              animate={{ opacity: 1, y: 0, rotateX: 0 }}
+              exit={{ opacity: 0, y: -40, rotateX: -90 }}
+              transition={{ duration: 1, ease: 'easeInOut' }}
+              className={styles.loadingArea}
+              style={{ perspective: '1000px' }}
+            >
+              <div className={styles.loadingText}>
+                {loadingMessage}
+                <motion.span
+                  animate={{ opacity: [0, 1, 0] }}
+                  transition={{ repeat: Infinity, duration: 1.5 }}
+                  className={styles.dots}
+                >
+                  ...
+                </motion.span>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
         <AnimatePresence>
           {displayedAiResponse && (
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
               className={styles.aiResponseArea}
             >
               <div className={styles.aiText}>
-                {displayedAiResponse}
-                {status === 'thinking' && <span className={styles.streamingCursor}>|</span>}
+                {displayedAiResponse.split(/(\*\*.*?\*\*)/g).map((part, i) =>
+                  part.startsWith('**') && part.endsWith('**') ?
+                    <strong key={i} style={{ color: 'white', fontWeight: 700 }}>{part.slice(2, -2)}</strong> :
+                    part
+                )}
+                {status === 'thinking' && !loadingMessage && <span className={styles.streamingCursor}>|</span>}
               </div>
             </motion.div>
           )}

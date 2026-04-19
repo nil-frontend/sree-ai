@@ -1,4 +1,4 @@
-import { encrypt, decrypt } from './backend/src/lib/encryption';
+import { encrypt, decrypt } from '../backend/src/lib/encryption';
 import dotenv from 'dotenv';
 import path from 'path';
 
